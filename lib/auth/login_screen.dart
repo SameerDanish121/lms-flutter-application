@@ -226,14 +226,14 @@ class _LoginState extends State<Login> {
 
             // Navigate based on role
             if (role == 'Teacher') {
-              ApiServices.storeFcmTokens(data['StudentInfo']['user_id']);
+              ApiServices.storeFcmTokens(userId);
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => TeacherHome(teacherData: data['TeacherInfo'])),
                     (route) => false,
               );
             } else if (role == 'JuniorLecturer') {
-              ApiServices.storeFcmTokens(data['StudentInfo']['user_id']);
+              ApiServices.storeFcmTokens(userId);
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => JuniorHome(juniorData: data['TeacherInfo'])),

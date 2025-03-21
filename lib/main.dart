@@ -10,7 +10,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await NotificationService.instance.initialize(); // ⬅️ Call it here
-  // Example: Initialize SharedPreferences or Firebase
   SharedPreferences prefs = await SharedPreferences.getInstance();
   runApp(const MyApp());
 }
