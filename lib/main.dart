@@ -2,8 +2,10 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:lmsv2/firebase/notification_services.dart';
+import 'package:lmsv2/provider/instructor_provider.dart';
 import 'package:lmsv2/splashscreen/ball%20bounce/index.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 Future<void> main() async {
@@ -11,7 +13,15 @@ Future<void> main() async {
   await Firebase.initializeApp();
   await NotificationService.instance.initialize(); // ⬅️ Call it here
   SharedPreferences prefs = await SharedPreferences.getInstance();
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => InstructorProvider()),
+        // Add other providers if needed
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 class MyApp extends StatefulWidget {
   const MyApp({super.key});

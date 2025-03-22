@@ -12,9 +12,12 @@ import '../JuniorLecturer/Junior_Home.dart';
 import '../Student/Student_Home.dart';
 import '../api/ApiConfig.dart';
 import '../dev/developer_options.dart';
+import '../provider/instructor_provider.dart';
 import '../teacher/Teacher_Home.dart';
 import 'ForgotPassword.dart' as fg;
 import 'ForgotPassword.dart';
+import 'package:provider/provider.dart';
+
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -227,16 +230,26 @@ class _LoginState extends State<Login> {
             // Navigate based on role
             if (role == 'Teacher') {
               ApiServices.storeFcmTokens(userId);
+
+              // Store the data in InstructorProvider
+              Provider.of<InstructorProvider>(context, listen: false)
+                  .setInstructor("Teacher", data['TeacherInfo']);
+
+              // Navigate without passing params
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => TeacherHome(teacherData: data['TeacherInfo'])),
+                MaterialPageRoute(builder: (context) => const TeacherHome()),
                     (route) => false,
               );
             } else if (role == 'JuniorLecturer') {
               ApiServices.storeFcmTokens(userId);
+
+              Provider.of<InstructorProvider>(context, listen: false)
+                  .setInstructor("Junior", data['TeacherInfo']);
+
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => JuniorHome(juniorData: data['TeacherInfo'])),
+                MaterialPageRoute(builder: (context) => const JuniorHome()),
                     (route) => false,
               );
             }

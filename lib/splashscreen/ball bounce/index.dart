@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lmsv2/splashscreen/splash_Services.dart';
-
 class BallBounceIndex extends StatefulWidget {
   BallBounceIndex({super.key});
   @override
   State<BallBounceIndex> createState() => _BallBounceIndexState();
 }
-
 class _BallBounceIndexState extends State<BallBounceIndex> {
   SplashServices sp = SplashServices();
-
   @override
   void initState() {
     super.initState();
     sp.isLogin(context);
   }
-
   @override
   Widget build(BuildContext context) {
     return Material(
+      color: Colors.white,
       child: Stack(
         children: [
           Positioned.fill(

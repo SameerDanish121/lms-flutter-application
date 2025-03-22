@@ -1,47 +1,94 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
-import 'package:permission_handler/permission_handler.dart';
-import 'package:path/path.dart' as path;
-import '../PDF/pdf.dart';
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
-import 'dart:convert';
-class TeacherHome extends StatelessWidget {
-  final Map<String, dynamic> teacherData;
-  final String pdfName = "sameer.pdf";
-  final String pdfUrl = "https://www.cisco.com/c/dam/global/fi_fi/assets/docs/SMB_University_120307_Networking_Fundamentals.pdf";
-  const TeacherHome({Key? key, required this.teacherData}) : super(key: key);
+
+class TeacherHome extends StatefulWidget {
+  const TeacherHome({Key? key}) : super(key: key);
+
+  @override
+  State<TeacherHome> createState() => _TeacherHomeState();
+}
+
+class _TeacherHomeState extends State<TeacherHome> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    const HomeScreen(),
+    const NotificationScreen(),
+    const CreateTaskScreen(),
+    const ProfileScreen(),
+    const SettingsScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    if (index == 2) return; // For FAB
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  void _onFabPressed() {
+    setState(() {
+      _selectedIndex = 2;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cisco Networking PDF'),
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: _buildCustomBottomNavigationBar(),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF3969D7),
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: _onFabPressed,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    );
+  }
+
+  Widget _buildCustomBottomNavigationBar() {
+    return BottomAppBar(
+      color: const Color(0xFF3969D7),
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 8,
+      child: SizedBox(
+        height: 60,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            const Text(
-              'Cisco Networking Fundamentals PDF',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            _buildNavItem(0, Icons.home, 'Home'),
+            _buildNavItem(1, Icons.notifications, 'Notification'),
+            const SizedBox(width: 40), // Space for FAB
+            _buildNavItem(3, Icons.person, 'Profile'),
+            _buildNavItem(4, Icons.settings, 'Setting'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    bool isSelected = _selectedIndex == index;
+
+    return InkWell(
+      onTap: () => _onItemTapped(index),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.amber : Colors.white,
+              size: 24,
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PDFViewerPage(
-                      pdfName: pdfName,
-                      pdfUrl: pdfUrl,
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Open PDF'),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.amber : Colors.white,
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -49,295 +96,866 @@ class TeacherHome extends StatelessWidget {
     );
   }
 }
-// In pubspec.yaml, use this specific version:
-// syncfusion_flutter_pdfviewer: ^22.2.12
 
-
-
-
-
-class PDFViewerPage extends StatefulWidget {
-  final String pdfName;
-  final String pdfUrl; // Can be network URL or file path
-
-  const PDFViewerPage({
-    Key? key,
-    required this.pdfName,
-    required this.pdfUrl
-  }) : super(key: key);
-
-  @override
-  _PDFViewerPageState createState() => _PDFViewerPageState();
-}
-
-class _PDFViewerPageState extends State<PDFViewerPage> {
-  bool _isLoading = true;
-  String? _localPath;
-  int _totalPages = 0;
-  int _currentPage = 0;
-  bool _hasHighlights = false;
-  Map<int, List<Map<String, dynamic>>> _highlights = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPdf();
-  }
-
-  Future<void> _loadPdf() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Create app directory if it doesn't exist
-      final appDir = await _getAppDirectory();
-
-      // Check if PDF already exists in local storage
-      final localPdfPath = path.join(appDir.path, widget.pdfName);
-      final localPdfFile = File(localPdfPath);
-      final localHighlightsPath = path.join(appDir.path, '${widget.pdfName}_highlights.json');
-      final localHighlightsFile = File(localHighlightsPath);
-
-      // If the PDF exists locally, use it
-      if (await localPdfFile.exists()) {
-        print('Loading PDF from local storage: $localPdfPath');
-        _localPath = localPdfPath;
-
-        // Load highlights if they exist
-        if (await localHighlightsFile.exists()) {
-          final highlightsData = await localHighlightsFile.readAsString();
-          try {
-            // Parse the highlights JSON
-            final Map<String, dynamic> highlightsJson = json.decode(highlightsData);
-            _hasHighlights = true;
-
-            // Convert string keys (page numbers) back to integers
-            highlightsJson.forEach((key, value) {
-              final int pageNum = int.parse(key);
-              _highlights[pageNum] = List<Map<String, dynamic>>.from(value);
-            });
-
-            print('Loaded ${_highlights.length} pages with highlights');
-          } catch (e) {
-            print('Error parsing highlights: $e');
-          }
-        }
-      } else {
-        // If URL is a network URL, download the PDF
-        if (widget.pdfUrl.startsWith('http')) {
-          print('Downloading PDF from network: ${widget.pdfUrl}');
-          final response = await http.get(Uri.parse(widget.pdfUrl));
-          if (response.statusCode == 200) {
-            await localPdfFile.writeAsBytes(response.bodyBytes);
-            _localPath = localPdfPath;
-          } else {
-            throw Exception('Failed to download PDF: ${response.statusCode}');
-          }
-        } else {
-          // If URL is a file path on device, copy it to app directory
-          print('Copying PDF from device path: ${widget.pdfUrl}');
-          final File originalFile = File(widget.pdfUrl);
-          if (await originalFile.exists()) {
-            await originalFile.copy(localPdfPath);
-            _localPath = localPdfPath;
-          } else {
-            throw Exception('File not found at specified path');
-          }
-        }
-      }
-    } catch (e) {
-      print('Error loading PDF: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading PDF: $e')),
-      );
-      // Fallback to original URL if there's an error
-      _localPath = null;
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<Directory> _getAppDirectory() async {
-    // Get app documents directory
-    final Directory appDocDir = await getApplicationDocumentsDirectory();
-    final Directory pdfDir = Directory('${appDocDir.path}/pdf_viewer_app');
-
-    // Create directory if it doesn't exist
-    if (!await pdfDir.exists()) {
-      await pdfDir.create(recursive: true);
-    }
-
-    return pdfDir;
-  }
-
-  Future<void> _saveHighlights() async {
-    try {
-      if (_localPath != null) {
-        final appDir = await _getAppDirectory();
-        final localHighlightsPath = path.join(appDir.path, '${widget.pdfName}_highlights.json');
-        final localHighlightsFile = File(localHighlightsPath);
-
-        // Convert _highlights Map to a serializable format
-        // We need to convert int keys to strings for JSON
-        final Map<String, dynamic> serializedHighlights = {};
-        _highlights.forEach((pageNum, pageHighlights) {
-          serializedHighlights[pageNum.toString()] = pageHighlights;
-        });
-
-        final String highlightsJson = json.encode(serializedHighlights);
-        await localHighlightsFile.writeAsString(highlightsJson);
-
-        setState(() {
-          _hasHighlights = true;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Highlights saved successfully')),
-        );
-      }
-    } catch (e) {
-      print('Error saving highlights: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving highlights: $e')),
-      );
-    }
-  }
-
-  void _addHighlight() {
-    // Since flutter_pdfview doesn't have built-in text selection,
-    // we'll simulate adding highlights by storing page and position
-    if (_currentPage > 0) {
-      // In a real app, you'd have UI for selecting rectangle coordinates
-      // Here we're just saving the current page with a mock rectangle
-
-      // Create highlight data (this would normally come from user selection)
-      final Map<String, dynamic> highlight = {
-        'rect': {'x': 100, 'y': 100, 'width': 200, 'height': 50},
-        'color': 'yellow',
-        'note': 'Added on page $_currentPage'
-      };
-
-      // Add to our highlights data structure
-      if (!_highlights.containsKey(_currentPage)) {
-        _highlights[_currentPage] = [];
-      }
-      _highlights[_currentPage]!.add(highlight);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Highlight added to page $_currentPage')),
-      );
-    }
-  }
+// Home Screen
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.pdfName),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: _addHighlight,
-            tooltip: 'Add highlight to current page',
-          ),
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveHighlights,
-            tooltip: 'Save highlights',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
+      body: Column(
         children: [
-          _localPath != null
-              ? PDFView(
-            filePath: _localPath!,
-            enableSwipe: true,
-            swipeHorizontal: true,
-            autoSpacing: true,
-            pageFling: true,
-            pageSnap: true,
-            defaultPage: 0,
-            fitPolicy: FitPolicy.BOTH,
-            preventLinkNavigation: false,
-            onRender: (pages) {
-              setState(() {
-                _totalPages = pages!;
-              });
-            },
-            onError: (error) {
-              print('Error rendering PDF: $error');
-            },
-            onPageChanged: (page, total) {
-              setState(() {
-                _currentPage = page!;
-              });
-            },
-            onViewCreated: (PDFViewController controller) {
-              // You can store the controller for later use
-            },
-          )
-              : Center(
-            child: Text('Unable to load PDF. Please try again.'),
-          ),
-          if (_hasHighlights)
-            Positioned(
-              top: 10,
-              left: 10,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Saved highlights loaded for ${_highlights.length} pages',
-                  style: TextStyle(color: Colors.white),
-                ),
+          // App Bar with profile info
+          _buildAppBar(),
+
+          // Timetable Section
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionHeader('Timetable', onViewAll: () {}),
+                  const SizedBox(height: 16),
+                  _buildTimetable(),
+                  const SizedBox(height: 24),
+
+                  // Academic Records Section
+                  _buildSectionTitle('Academic Records'),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(child: _buildRecordCard('Attendance', Icons.person_outline, onTap: () {})),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildRecordCard('Courses', Icons.computer, onTap: () {})),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Manage And Tracks Section
+                  _buildSectionTitle('Manage And Tracks'),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(child: _buildRecordCard('Mark Task', Icons.assignment_outlined, onTap: () {})),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildRecordCard('Mark Attendance', Icons.check_box_outlined, onTap: () {})),
+                    ],
+                  ),
+                ],
               ),
             ),
-          Positioned(
-            bottom: 20,
-            left: 0,
-            right: 0,
-            child: _totalPages > 0
-                ? Center(
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Page ${_currentPage + 1} of $_totalPages',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            )
-                : Container(),
           ),
         ],
       ),
-      floatingActionButton: _localPath != null ? FloatingActionButton(
-        onPressed: () {
-          // Show number of highlights in current page
-          int highlightCount = _highlights[_currentPage]?.length ?? 0;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Page ${_currentPage + 1} has $highlightCount highlights'),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 16),
+      color: const Color(0xFF3969D7),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Welcome Back!',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              Text(
+                'Muhammad Ahsan',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Lecturer',
+                style: TextStyle(color: Colors.amber, fontSize: 14),
+              ),
+            ],
+          ),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              image: const DecorationImage(
+                image: AssetImage('assets/ahsan.jpg'),
+                fit: BoxFit.cover,
+              ),
             ),
-          );
-        },
-        child: const Icon(Icons.format_paint),
-        tooltip: 'Show highlights in current page',
-      ) : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, {required Function onViewAll}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
+        ),
+        TextButton(
+          onPressed: () => onViewAll(),
+          child: const Text('See all'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
+      ),
+    );
+  }
+
+  Widget _buildTimetable() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Date and day
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: const [
+            Text(
+              'Jun 10, 2024',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              'Monday',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Table header
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
+          ),
+          child: Row(
+            children: const [
+              Expanded(flex: 2, child: Text('Course', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(flex: 2, child: Text('Section', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(flex: 2, child: Text('Venue', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(flex: 3, child: Text('Time', style: TextStyle(fontWeight: FontWeight.bold))),
+            ],
+          ),
+        ),
+
+        // Table rows
+        _buildTimetableRow('VP', 'BCS-7B', 'LT10', '09:30 - 10:30', false),
+        _buildTimetableRow('DBS', 'BSE-2A', 'LT12', '11:30 - 12:30', true),
+        _buildTimetableRow('DAM', 'BSE-3B', 'Lab1', '02:00 - 03:00', false),
+        _buildTimetableRow('OOP', 'BCS-8A', 'LT9', '03:00 - 04:00', false),
+        _buildTimetableRow('PF', 'BAI-A', 'LT2', '04:00 - 05:00', false),
+      ],
+    );
+  }
+
+  Widget _buildTimetableRow(String course, String section, String venue, String time, bool highlighted) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      color: highlighted ? Colors.grey.shade200 : Colors.transparent,
+      child: Row(
+        children: [
+          Expanded(flex: 2, child: Text(course)),
+          Expanded(flex: 2, child: Text(section)),
+          Expanded(flex: 2, child: Text(venue)),
+          Expanded(
+            flex: 3,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3969D7),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                time,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecordCard(String title, IconData icon, {required Function onTap}) {
+    return InkWell(
+      onTap: () => onTap(),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: const Color(0xFF3969D7), size: 40),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'View',
+              style: TextStyle(
+                color: Colors.blue,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
+// Notification Screen
+class NotificationScreen extends StatelessWidget {
+  const NotificationScreen({Key? key}) : super(key: key);
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          // App Bar with profile info
+          _buildAppBar(),
+
+          // Notification Content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Notifications',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3969D7),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Send Notification Section
+                  const Text(
+                    'Send Notification',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title field
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: const [
+                        Text('Title : '),
+                        Expanded(
+                          child: Text('Pre Scheduled Class'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Message field
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Your Class of Friday 22-Nove-2024 is pre scheduled on Tuesday 2:00-300',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Section dropdown and Send button
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: const [
+                              Text('Section'),
+                              Icon(Icons.arrow_drop_down),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF3969D7),
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {},
+                        child: const Text('Send'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Your Notifications section
+                  const Text(
+                    'Your Notification',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Notification list would go here
+                  // Empty for now
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 16),
+      color: const Color(0xFF3969D7),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Welcome Back!',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              Text(
+                'Muhammad Ahsan',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Lecturer',
+                style: TextStyle(color: Colors.amber, fontSize: 14),
+              ),
+            ],
+          ),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              image: const DecorationImage(
+                image: AssetImage('assets/ahsan.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Create Task Screen
+class CreateTaskScreen extends StatelessWidget {
+  const CreateTaskScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          // App Bar with profile info
+          _buildAppBar(),
+
+          // Create Task Form
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Create New Task',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3969D7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Course Field
+                  _buildInputLabel('Course'),
+                  _buildDropdownField('Compiler Construction'),
+                  const SizedBox(height: 16),
+
+                  // Task Title Field
+                  _buildInputLabel('Task Title'),
+                  _buildInputField('SP24-LABTASK-02-7B'),
+                  const SizedBox(height: 16),
+
+                  // Section & Type Fields
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildInputLabel('Section'),
+                            _buildDropdownField('BCS-7B'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildInputLabel('Type'),
+                            _buildDropdownField('Lab Task'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Selected Sections
+                  _buildInputLabel('Selected Section :'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _buildSectionChip('BAI-7A'),
+                      _buildSectionChip('BCS-7A'),
+                      _buildSectionChip('BCS-7C'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Due Date and Time
+                  _buildInputLabel('Due Date-Time'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      // Time Picker Button
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3969D7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.access_time, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('10:30 AM', style: TextStyle(color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Date Picker Button
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3969D7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.calendar_today, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('15/11/2022', style: TextStyle(color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Total Points
+                  _buildInputLabel('Total Points :'),
+                  _buildInputField('10'),
+                  const SizedBox(height: 16),
+
+                  // Upload Question File
+                  _buildInputLabel('Upload Question File:'),
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Text('2021-ARID-4583-CC-QUIZ02.pdf'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.cloud_upload, color: Color(0xFF3969D7)),
+                          onPressed: () {},
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Create Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3969D7),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () {},
+                      child: const Text(
+                        'Create',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 16),
+      color: const Color(0xFF3969D7),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Welcome Back!',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              Text(
+                'Muhammad Ahsan',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Lecturer',
+                style: TextStyle(color: Colors.amber, fontSize: 14),
+              ),
+            ],
+          ),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              image: const DecorationImage(
+                image: AssetImage('assets/ahsan.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
+  Widget _buildInputField(String value) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(value),
+    );
+  }
+
+  Widget _buildDropdownField(String value) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(value),
+          const Icon(Icons.arrow_drop_down),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionChip(String label) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          const SizedBox(width: 4),
+          const Icon(Icons.close, size: 16),
+        ],
+      ),
+    );
+  }
+}
+
+// Profile Screen
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          // App Bar with profile info
+          _buildAppBar(),
+
+          // Profile Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  const Text(
+                    'Profile',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3969D7),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Profile Image
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF3969D7), width: 2),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/ahsan.jpg'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Profile Details
+                  _buildProfileRow('Name :', 'Muhammad Ahsan'),
+                  _buildProfileRow('Qualification :', 'Computer Science(MS)'),
+                  _buildProfileRow('Gender :', 'Male'),
+                  _buildProfileRow('DOB :', '25-5-1986'),
+                  _buildProfileRow('Date Of Joining :', '22-08-2013'),
+                  _buildProfileRow('Email :', 'MAhsan@biit.com'),
+                  _buildProfileRow('Phone No :', '0307098763'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 16),
+      color: const Color(0xFF3969D7),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Welcome Back!',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              Text(
+                'Muhammad Ahsan',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Lecturer',
+                style: TextStyle(color: Colors.amber, fontSize: 14),
+              ),
+            ],
+          ),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              image: const DecorationImage(
+                image: AssetImage('assets/ahsan.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileRow(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF3969D7),
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 5,
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold();}}
