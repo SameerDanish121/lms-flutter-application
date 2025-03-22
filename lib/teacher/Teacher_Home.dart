@@ -151,10 +151,10 @@ class Model {
 
 List<Model> navBtn = [
   Model(id: 0, imagePath: 'assets/home.png', name: 'Home'),
-  Model(id: 1, imagePath: 'assets/icon/search.png', name: 'Search'),
-  Model(id: 2, imagePath: 'assets/icon/heart.png', name: 'Like'),
-  Model(id: 3, imagePath: 'assets/icon/notification.png', name: 'notification'),
-  Model(id: 4, imagePath: 'assets/icon/user.png', name: 'Profile'),
+  Model(id: 1, imagePath: 'assets/bell.png', name: 'Notification'),
+  Model(id: 2, imagePath: 'assets/more.png', name: 'Task'),
+  Model(id: 3, imagePath: 'assets/user.png', name: 'Profile'),
+  Model(id: 4, imagePath: 'assets/settings.png', name: 'Setting'),
 ];
 
 class ButtonNotch extends CustomPainter {
