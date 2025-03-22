@@ -63,7 +63,6 @@ class ApiServices {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'fcm_token': token}));
   }
-
   // Verify OTP
   static Future<http.Response> verifyOtp(String userId, int otp) async {
     final url = Uri.parse("${ApiConfig.apiBaseUrl}verify-otp");
@@ -71,7 +70,6 @@ class ApiServices {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'otp': otp}));
   }
-
   // Update Password
   static Future<http.Response> updatePassword(String userId, String newPassword) async {
     final url = Uri.parse("${ApiConfig.apiBaseUrl}update-pass");

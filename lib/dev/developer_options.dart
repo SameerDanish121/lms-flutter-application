@@ -6,12 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
 import 'package:lmsv2/auth/login_screen.dart';
-
 class SecretScreen extends StatefulWidget {
   @override
   _SecretScreenState createState() => _SecretScreenState();
 }
-
 class _SecretScreenState extends State<SecretScreen> {
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();

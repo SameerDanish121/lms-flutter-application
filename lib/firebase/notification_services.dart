@@ -133,8 +133,8 @@ class NotificationService {
   }
 
   void _handleBackgroundMessage(RemoteMessage message) {
-    if (message.data['type'] == 'chat') {
-      // open chat screen
+    if (message.data['type'] == 'general') {
+
     }
   }
 }

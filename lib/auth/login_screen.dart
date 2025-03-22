@@ -17,14 +17,11 @@ import '../teacher/Teacher_Home.dart';
 import 'ForgotPassword.dart' as fg;
 import 'ForgotPassword.dart';
 import 'package:provider/provider.dart';
-
-
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
   @override
   _LoginState createState() => _LoginState();
 }
-
 class _LoginState extends State<Login> {
   bool _rememberMe = false;
   bool _isLoading = false;
