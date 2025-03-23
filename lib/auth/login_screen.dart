@@ -340,18 +340,10 @@ class _LoginState extends State<Login> {
             break;
           case 'Teacher':
             handleRoleNavigation(context, 'Teacher', {'TeacherInfo': data['TeacherInfo']});
-            // Navigator.pushReplacement(
-            //   context,
-            //   MaterialPageRoute(builder: (context) => TeacherHome(teacherData: data['TeacherInfo'])),
-            // );
+
             break;
           case 'JuniorLecturer':
             handleRoleNavigation(context, 'JuniorLecturer', {'TeacherInfo': data['TeacherInfo']});
-            // handleRoleNavigation(context, 'JuniorLecturer', data['TeacherInfo']);
-            // Navigator.pushReplacement(
-            //   context,
-            //   MaterialPageRoute(builder: (context) => JuniorHome(juniorData: data['TeacherInfo'])),
-            // );
             break;
           default:
             CustomAlert.error(context,'Login Failed','Please Enter Valid Username and Password !');
@@ -393,7 +385,7 @@ class _LoginState extends State<Login> {
       cancelBtnText: 'Cancel',
       confirmBtnColor: Color(0xFF3969D7),
       onConfirmBtnTap: () {
-        if (password == 'hxrmc1500p') {
+        if (password == '123') {
           Navigator.pop(context); // Close the QuickAlert
           Navigator.push(
             context,

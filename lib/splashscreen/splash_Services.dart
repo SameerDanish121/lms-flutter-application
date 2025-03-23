@@ -1,7 +1,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
@@ -44,7 +43,8 @@ class SplashServices{
     // If we have credentials, try to auto-login
     if (hasCredentials) {
       try {
-        CustomAlert.loading(context, 'Auto-login', 'Please Wait While , we validate your old data');
+
+        CustomAlert.loading(context, 'Auto-Login', 'Validating saved login credentials. Please wait...');
         // Try to login with stored credentials
         final response = await http.get(
           Uri.parse('${ApiConfig.apiBaseUrl}remember').replace(
@@ -54,10 +54,9 @@ class SplashServices{
             },
           ),
         ).timeout(Duration(seconds: 10)); // Add timeout to prevent indefinite waiting
-
         // Close loading dialog
         Navigator.pop(context);
-
+        CustomAlert.loading(context, 'Auto-login', 'sameer danish');
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final userType = data['Type'];

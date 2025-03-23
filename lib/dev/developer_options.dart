@@ -6,29 +6,37 @@ import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
 import 'package:lmsv2/auth/login_screen.dart';
+import 'package:quickalert/quickalert.dart';
+
+import '../alerts/custom_alerts.dart';
+
 class SecretScreen extends StatefulWidget {
+  const SecretScreen({super.key});
+
   @override
   _SecretScreenState createState() => _SecretScreenState();
 }
+
 class _SecretScreenState extends State<SecretScreen> {
   final TextEditingController _urlController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
   String _currentBaseUrl = ApiConfig.apiBaseUrl; // Get from ApiConfig
   bool _isTesting = false;
   String? _fcmToken; // Store FCM token
 
-  // Color theme constants
-  final Color _primaryColor = Color(0xFF3F51B5);  // Indigo
-  final Color _accentColor = Color(0xFF03A9F4);   // Light Blue
-  final Color _successColor = Color(0xFF4CAF50); // Green
-  final Color _dangerColor = Color(0xFFE53935);  // Red
-  final Color _cardColor = Color(0xFFF5F7FA);    // Light background for cards
+  // Theme colors
+  final Color _primaryColor = Color(0xFF2A3F54); // Dark blue
+  final Color _accentColor = Color(0xFF4A85FF); // Vibrant blue
+  final Color _successColor = Color(0xFF43A047); // Green
+  final Color _dangerColor = Color(0xFFE53935); // Red
+  final Color _warningColor = Color(0xFFFFA000); // Amber
+  final Color _cardColor = Color(0xFFF5F7FA); // Light gray background
 
   @override
   void initState() {
     super.initState();
     _fetchFCMToken(); // Fetch FCM token on screen load
-    _urlController.text = _currentBaseUrl; // Pre-populate URL field with current value
+    _urlController.text =
+        _currentBaseUrl; // Pre-populate URL field with current value
   }
 
   // Fetch FCM Token
@@ -40,195 +48,109 @@ class _SecretScreenState extends State<SecretScreen> {
     });
   }
 
-  // Function to test the connection to the API
   Future<void> testConnection() async {
+    CustomAlert.loading(context, 'Testing', 'Testing connection to API...');
     setState(() {
       _isTesting = true;
     });
     try {
       final response = await http.get(Uri.parse("$_currentBaseUrl"));
       if (response.statusCode == 200) {
-        _showDialog("Connection Success", "API is reachable!", isSuccess: true);
+        Navigator.pop(context);
+        CustomAlert.success(context, "API is reachable ! ");
       } else {
-        _showDialog(
+        Navigator.pop(context);
+        CustomAlert.error(context,
             "Connection Failed",
-            "Failed to reach the API. Status Code: ${response.statusCode}",
-            isSuccess: false);
+            "Failed to reach the API. Status Code: ${response.statusCode}");
       }
     } catch (e) {
-      _showDialog("Connection Failed", "Error: $e", isSuccess: false);
+      Navigator.pop(context);
+      CustomAlert.error(context,"Connection Failed", "Error: $e");
     } finally {
       setState(() {
         _isTesting = false;
       });
     }
   }
-
-  // Function to show dialog with connection status
-  void _showDialog(String title, String message, {bool isSuccess = true}) {
-    showDialog(
+  void _showAuthenticationDialog() {
+    String password = '';
+    QuickAlert.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              isSuccess ? Icons.check_circle : Icons.error,
-              color: isSuccess ? _successColor : _dangerColor,
-            ),
-            SizedBox(width: 10),
-            Text(title),
-          ],
-        ),
-        content: Text(message),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("OK", style: TextStyle(color: _primaryColor)),
+      type: QuickAlertType.custom,
+      barrierDismissible: false,
+      title: 'Developer Access',
+      customAsset: 'assets/developer.jpg', // For the developer photo
+      widget: TextField(
+        obscureText: true,
+        onChanged: (value) => password = value,
+        decoration: InputDecoration(
+          hintText: 'Enter Password',
+          hintStyle: TextStyle(color: Colors.grey[600]),
+          filled: true,
+          fillColor: Colors.grey[200],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
           ),
-        ],
+          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        ),
       ),
-    );
-  }
+      confirmBtnText: 'Submit',
+      cancelBtnText: 'Cancel',
+      confirmBtnColor: Color(0xFF3969D7),
+      onConfirmBtnTap: () {
+        if (password == '123') {
+          // Using '123' as password as requested
+          Navigator.pop(context); // Close the QuickAlert
 
-  // Function to update the base URL
-  void _updateBaseUrl() {
-    _passwordController.clear(); // Clear previous password
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.lock, color: _primaryColor),
-            SizedBox(width: 10),
-            Text("Confirm Password"),
-          ],
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Please enter the password to confirm URL change."),
-            SizedBox(height: 15),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                hintText: 'Enter password',
-                prefixIcon: Icon(Icons.vpn_key, color: _primaryColor),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: _primaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: _primaryColor, width: 2),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (_passwordController.text == "sameer") {
-                setState(() {
-                  _currentBaseUrl = _urlController.text;
-                  ApiConfig.apiBaseUrl = _currentBaseUrl;
-                });
-                Navigator.pop(context);
-                _showDialog("Success", "Base URL updated successfully!", isSuccess: true);
-              } else {
-                Navigator.pop(context);
-                _showDialog("Error", "Incorrect password. Please try again.", isSuccess: false);
-              }
-            },
-            child: Text("Confirm", style: TextStyle(color: _primaryColor)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel", style: TextStyle(color: Colors.grey)),
-          ),
-        ],
-      ),
+          // Update the API URL
+          setState(() {
+            _currentBaseUrl = _urlController.text;
+            ApiConfig.apiBaseUrl = _currentBaseUrl;
+          });
+
+          CustomAlert.success(context, "Base URL updated successfully!");
+        } else {
+          Navigator.pop(context); // Close the first alert
+          CustomAlert.error(
+              context, "Authentication Failed", "Incorrect Password!");
+        }
+      },
     );
   }
 
   // Function to copy text to clipboard
   void _copyToClipboard(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 10),
-            Text("$label copied to clipboard"),
-          ],
-        ),
-        backgroundColor: _successColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    CustomAlert.success(context, "$label copied to clipboard");
   }
 
   // Function to log out and navigate to login screen
-  void _logout() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.exit_to_app, color: _dangerColor),
-            SizedBox(width: 10),
-            Text("Confirm Logout"),
-          ],
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        content: Text("Are you sure you want to log out of the developer panel?"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => Login()),
-              );
-            },
-            child: Text("Yes", style: TextStyle(color: _dangerColor)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("No", style: TextStyle(color: Colors.grey)),
-          ),
-        ],
-      ),
-    );
+  void _logout() async {
+    final result = await CustomAlert.confirm(
+        context, "Are you sure you want to log out of the developer panel?");
+
+    if (result == true) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Login()),
+      );
+    }
   }
 
   // Function to refresh FCM token
   void _refreshFCMToken() async {
-    setState(() {
-      _fcmToken = null; // Clear current token to show loading state
-    });
-    await _fetchFCMToken();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.refresh, color: Colors.white),
-            SizedBox(width: 10),
-            Text("FCM Token refreshed"),
-          ],
-        ),
-        backgroundColor: _successColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    await CustomAlert.performWithLoading(
+        context: context,
+        loadingText: "Refreshing FCM token...",
+        task: () async {
+          setState(() {
+            _fcmToken = null; // Clear current token to show loading state
+          });
+          await _fetchFCMToken();
+        },
+        successMessage: "FCM Token refreshed successfully");
   }
 
   @override
@@ -236,11 +158,15 @@ class _SecretScreenState extends State<SecretScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Developer Panel",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          "Developer Console",
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            fontSize: 20,
+          ),
         ),
         backgroundColor: _primaryColor,
-        elevation: 0,
+        elevation: 2,
         centerTitle: true,
         automaticallyImplyLeading: false, // Hides the back button
         shape: RoundedRectangleBorder(
@@ -254,236 +180,299 @@ class _SecretScreenState extends State<SecretScreen> {
             },
             tooltip: "Open Settings",
           ),
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            onPressed: _logout,
+            tooltip: "Logout",
+          ),
         ],
       ),
       body: Container(
-        color: Colors.grey[50],
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // API URL Card
-              _buildCard(
-                title: "Current API URL",
-                icon: Icons.link,
+        color: Colors.grey[100],
+        child: LayoutBuilder(builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                    maxWidth: 600), // Limit max width for larger screens
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: SelectableText(
-                              _currentBaseUrl,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: _accentColor,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.copy, color: _accentColor),
-                            onPressed: () => _copyToClipboard(_currentBaseUrl, "Base URL"),
-                            tooltip: "Copy URL",
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 15),
-                    TextField(
-                      controller: _urlController,
-                      decoration: InputDecoration(
-                        labelText: 'New API Base URL',
-                        hintText: 'https://your-api-url.com',
-                        prefixIcon: Icon(Icons.edit, color: _primaryColor),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: _primaryColor, width: 2),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      keyboardType: TextInputType.url,
-                    ),
-                    SizedBox(height: 15),
-                    ElevatedButton.icon(
-                      onPressed: _updateBaseUrl,
-                      icon: Icon(Icons.save, color: Colors.white),
-                      label: Text("Update API URL", style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryColor,
-                        minimumSize: Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 16),
-
-              // FCM Token Card
-              _buildCard(
-                title: "Firebase Cloud Messaging Token",
-                icon: Icons.notifications_active,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      width: double.infinity,
+                    // API URL Card
+                    _buildCard(
+                      title: "API Configuration",
+                      icon: Icons.api,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _fcmToken == null
-                              ? Row(
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: _primaryColor,
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Text("Fetching token..."),
-                            ],
-                          )
-                              : SelectableText(
-                            _fcmToken!,
+                          Text(
+                            "Current API URL:",
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.black87,
-                              fontFamily: 'monospace',
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: SelectableText(
+                                    _currentBaseUrl,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: _accentColor,
+                                      fontFamily: 'monospace',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.copy, color: _accentColor),
+                                  onPressed: () => _copyToClipboard(
+                                      _currentBaseUrl, "API URL"),
+                                  tooltip: "Copy URL",
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                          Text(
+                            "Update API URL:",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          TextField(
+                            controller: _urlController,
+                            decoration: InputDecoration(
+                              hintText: 'https://your-api-url.com',
+                              prefixIcon: Icon(Icons.link, color: _accentColor),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide:
+                                    BorderSide(color: _accentColor, width: 2),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            keyboardType: TextInputType.url,
+                          ),
+                          SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _showAuthenticationDialog,
+                            icon: Icon(Icons.save, color: Colors.white),
+                            label: Text("Update URL",
+                                style: TextStyle(color: Colors.white)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _accentColor,
+                              minimumSize: Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 2,
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: _isTesting ? null : testConnection,
+                            icon: _isTesting
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Icon(Icons.network_check,
+                                    color: Colors.white),
+                            label: Text(
+                              _isTesting ? "Testing..." : "Test API Connection",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _successColor,
+                              disabledBackgroundColor:
+                                  _successColor.withOpacity(0.6),
+                              minimumSize: Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 2,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _fcmToken != null
-                                ? () => _copyToClipboard(_fcmToken!, "FCM Token")
-                                : null,
-                            icon: Icon(Icons.copy, color: Colors.white),
-                            label: Text("Copy Token", style: TextStyle(color: Colors.white)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _accentColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: EdgeInsets.symmetric(vertical: 12),
+
+                    SizedBox(height: 20),
+
+                    // FCM Token Card
+                    _buildCard(
+                      title: "FCM Token",
+                      icon: Icons.notifications_active,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Your Firebase Cloud Messaging Token:",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ),
-                        SizedBox(width: 10),
-                        IconButton(
-                          onPressed: _refreshFCMToken,
-                          icon: Icon(Icons.refresh),
-                          tooltip: "Refresh Token",
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.grey[200],
+                          SizedBox(height: 10),
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            width: double.infinity,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _fcmToken == null
+                                    ? Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: _accentColor,
+                                            ),
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text("Fetching token..."),
+                                        ],
+                                      )
+                                    : SelectableText(
+                                        _fcmToken!,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black87,
+                                          fontFamily: 'monospace',
+                                        ),
+                                      ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                          SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _fcmToken != null
+                                      ? () => _copyToClipboard(
+                                          _fcmToken!, "FCM Token")
+                                      : null,
+                                  icon: Icon(Icons.copy, color: Colors.white),
+                                  label: Text("Copy Token",
+                                      style: TextStyle(color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _accentColor,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              ElevatedButton.icon(
+                                onPressed: _refreshFCMToken,
+                                icon: Icon(Icons.refresh, color: Colors.white),
+                                label: Text("Refresh",
+                                    style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _primaryColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 16),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
+
+                    SizedBox(height: 20),
+
+                    // System Actions Card
+                    _buildCard(
+                      title: "System Actions",
+                      icon: Icons.settings_applications,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: Icon(Icons.settings, color: _warningColor),
+                            title: Text("Device Settings"),
+                            subtitle: Text("Access application settings"),
+                            trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            onTap: () {
+                              AppSettings.openAppSettings();
+                            },
+                          ),
+                          SizedBox(height: 10),
+                          ListTile(
+                            leading: Icon(Icons.logout, color: _dangerColor),
+                            title: Text("Logout"),
+                            subtitle: Text("Exit developer panel"),
+                            trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            onTap: _logout,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 20),
+
+                    // Footer
+                    Center(
+                      child: Text(
+                        "Developer Console v1.0",
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
                   ],
                 ),
               ),
-
-              SizedBox(height: 16),
-
-              // Actions Card
-              _buildCard(
-                title: "Connection & System Actions",
-                icon: Icons.settings_applications,
-                child: Column(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _isTesting ? null : testConnection,
-                      icon: _isTesting
-                          ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                          : Icon(Icons.network_check, color: Colors.white),
-                      label: Text(
-                        _isTesting ? "Testing..." : "Test API Connection",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _successColor,
-                        disabledBackgroundColor: _successColor.withOpacity(0.6),
-                        minimumSize: Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 2,
-                      ),
-                    ),
-                    SizedBox(height: 15),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        AppSettings.openAppSettings();
-                      },
-                      icon: Icon(Icons.settings, color: Colors.white),
-                      label: Text("Open System Settings", style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber[700],
-                        minimumSize: Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 2,
-                      ),
-                    ),
-                    SizedBox(height: 15),
-                    ElevatedButton.icon(
-                      onPressed: _logout,
-                      icon: Icon(Icons.logout, color: Colors.white),
-                      label: Text("Logout", style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _dangerColor,
-                        minimumSize: Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -510,19 +499,26 @@ class _SecretScreenState extends State<SecretScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               color: _cardColor,
               borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
             ),
             child: Row(
               children: [
-                Icon(icon, color: _primaryColor),
-                SizedBox(width: 10),
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: _primaryColor, size: 22),
+                ),
+                SizedBox(width: 12),
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: _primaryColor,
                   ),
@@ -531,7 +527,7 @@ class _SecretScreenState extends State<SecretScreen> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(20),
             child: child,
           ),
         ],

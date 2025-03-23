@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quickalert/quickalert.dart';
 
 class CustomAlert {
-  static void success(BuildContext context, String text) {
+  static  void success(BuildContext context, String text) {
     QuickAlert.show(
       context: context,
       type: QuickAlertType.success,
@@ -44,6 +44,12 @@ class CustomAlert {
       confirmBtnText: 'Yes',
       cancelBtnText: 'No',
       confirmBtnColor: Colors.green,
+      onConfirmBtnTap: () {
+        Navigator.of(context).pop(true);  // Return true on Yes
+      },
+      onCancelBtnTap: () {
+        Navigator.of(context).pop(false); // Return false on No
+      },
     );
   }
   // Loading Alert (Manually close using Navigator.pop(context))
