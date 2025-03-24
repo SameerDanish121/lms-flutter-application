@@ -9,7 +9,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await NotificationService.instance.setupFlutterNotifications();
   await NotificationService.instance.showNotification(message);
 }
-
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();

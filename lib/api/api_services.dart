@@ -2,8 +2,94 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'ApiConfig.dart'; // Ensure this is correctly imported
-
 class ApiServices {
+  static Future<Map<String, dynamic>> verifyLoginOTP(int userId, int otp) async {
+    try {
+      // Create URI for the endpoint
+      final uri = Uri.parse('${ApiConfig.apiBaseUrl}verify/login');
+
+      // Prepare request body
+      final body = jsonEncode({
+        'user_id': userId,
+        'otp': otp,
+      });
+
+      // Make POST request
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: body,
+      );
+
+      // Parse response body
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+      // Check status code
+      if (response.statusCode == 200) {
+        return responseData;
+      } else {
+        // Handle error responses
+        throw Exception(responseData['message'] ?? 'Failed to verify OTP');
+      }
+    } catch (e) {
+      // Handle any errors
+      throw Exception('Error verifying OTP: ${e.toString()}');
+    }
+  }
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to send OTP: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+  static Future<Map<String, dynamic>> verifyOtp(String userId, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'otp': otp}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to verify OTP: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+  static Future<Map<String, dynamic>> updatePassword(String userId, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}update-pass'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'new_password': newPassword}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to update password: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
   static Future<http.Response> sendOtp(String email) async {
     final url = Uri.parse("${ApiConfig.apiBaseUrl}forgot-password");
     return await http.post(url,
@@ -56,25 +142,10 @@ class ApiServices {
       print('Error storing FCM token: $e');
     }
   }
-  // Store FCM Token
   static Future<http.Response> storeFcmToken(String userId, String token) async {
     final url = Uri.parse("${ApiConfig.apiBaseUrl}store-fcmtoken");
     return await http.post(url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'fcm_token': token}));
-  }
-  // Verify OTP
-  static Future<http.Response> verifyOtp(String userId, int otp) async {
-    final url = Uri.parse("${ApiConfig.apiBaseUrl}verify-otp");
-    return await http.post(url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'otp': otp}));
-  }
-  // Update Password
-  static Future<http.Response> updatePassword(String userId, String newPassword) async {
-    final url = Uri.parse("${ApiConfig.apiBaseUrl}update-pass");
-    return await http.post(url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'new_password': newPassword}));
   }
 }

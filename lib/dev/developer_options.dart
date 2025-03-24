@@ -7,16 +7,12 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
 import 'package:lmsv2/auth/login_screen.dart';
 import 'package:quickalert/quickalert.dart';
-
 import '../alerts/custom_alerts.dart';
-
 class SecretScreen extends StatefulWidget {
   const SecretScreen({super.key});
-
   @override
   _SecretScreenState createState() => _SecretScreenState();
 }
-
 class _SecretScreenState extends State<SecretScreen> {
   final TextEditingController _urlController = TextEditingController();
   String _currentBaseUrl = ApiConfig.apiBaseUrl; // Get from ApiConfig

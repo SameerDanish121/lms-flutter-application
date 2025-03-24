@@ -14,20 +14,20 @@ import '../api/ApiConfig.dart';
 import '../dev/developer_options.dart';
 import '../provider/instructor_provider.dart';
 import '../teacher/Teacher_Home.dart';
-import 'ForgotPassword.dart' as fg;
-import 'ForgotPassword.dart';
 import 'package:provider/provider.dart';
+import 'ForgotPassword/RecoveryEmail.dart';
+
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
   @override
   _LoginState createState() => _LoginState();
 }
+
 class _LoginState extends State<Login> {
   bool _rememberMe = false;
   bool _isLoading = false;
   bool _isPasswordVisible = false;
   final _formKey = GlobalKey<FormState>();
-
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -48,8 +48,6 @@ class _LoginState extends State<Login> {
       });
     }
   }
-
-  // Save credentials if remember me is checked
   Future<void> _saveCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('rememberMe', _rememberMe);
@@ -63,12 +61,10 @@ class _LoginState extends State<Login> {
       await prefs.remove('password');
     }
   }
-
   void handleRoleNavigation(BuildContext context, String role, Map<String, dynamic> data) {
     int userId = data['TeacherInfo']['user_id'];
     String otpValue = '';
     bool isLoading = false;
-
     // Start 5-minute countdown timer
     int timeLeft = 300; // 5 minutes in seconds
     Timer? countdownTimer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -77,7 +73,6 @@ class _LoginState extends State<Login> {
         timer.cancel();
         // Close any open QuickAlert if timer expires
         Navigator.of(context).popUntil((route) => route.isFirst);
-
         // Show expired message
         QuickAlert.show(
           context: context,
@@ -94,15 +89,11 @@ class _LoginState extends State<Login> {
         );
       }
     });
-
-    // Format time as MM:SS
     String formatTime(int seconds) {
       int minutes = seconds ~/ 60;
       int remainingSeconds = seconds % 60;
       return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
     }
-
-    // Show OTP Dialog
     QuickAlert.show(
       context: context,
       type: QuickAlertType.custom,
@@ -110,9 +101,7 @@ class _LoginState extends State<Login> {
       confirmBtnText: 'Verify',
       customAsset: 'assets/two_factor.png', // Use an appropriate verification animation
       title: 'Two-Step Verification',
-      text: 'Enter the verification code sent to your registered device',
-      // Add scrollable property to fix overflow
-      //
+      text: 'Enter the verification code ',
       widget: SingleChildScrollView(
         physics: BouncingScrollPhysics(),
         child: Padding(
@@ -148,7 +137,7 @@ class _LoginState extends State<Login> {
                   },
                 ),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: 10),
               // OTP Input field
               TextFormField(
                 decoration: InputDecoration(
@@ -200,7 +189,7 @@ class _LoginState extends State<Login> {
           );
 
           // Call API to verify OTP
-          final response = await ApiService.verifyLoginOTP(
+          final response = await ApiServices.verifyLoginOTP(
             userId,
             int.parse(otpValue),
           );
@@ -297,8 +286,8 @@ class _LoginState extends State<Login> {
         );
       },
     );
+    // Login function
   }
-  // Login function
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -402,13 +391,11 @@ class _LoginState extends State<Login> {
       },
     );
   }
-
   @override
   Widget build(BuildContext context) {
     // Get device size for responsive design
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 360;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: GestureDetector(
@@ -610,7 +597,7 @@ class _LoginState extends State<Login> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => fg.ForgotPasswordScreen()),
+                                MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
                               );
                             },
                             style: TextButton.styleFrom(

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:quickalert/quickalert.dart';
-
 class CustomAlert {
-  static  void success(BuildContext context, String text) {
+  static void success(BuildContext context, String text) {
     QuickAlert.show(
       context: context,
       type: QuickAlertType.success,
       text: text,
     );
   }
-  // Error Alert
+
   static void error(BuildContext context, String title, String text) {
     QuickAlert.show(
       context: context,
@@ -18,7 +17,7 @@ class CustomAlert {
       text: text,
     );
   }
-  // Warning Alert
+
   static void warning(BuildContext context, String text) {
     QuickAlert.show(
       context: context,
@@ -27,7 +26,6 @@ class CustomAlert {
     );
   }
 
-  // Info Alert
   static void info(BuildContext context, String text) {
     QuickAlert.show(
       context: context,
@@ -35,7 +33,7 @@ class CustomAlert {
       text: text,
     );
   }
-  // Confirmation Alert - Returns Future
+
   static Future confirm(BuildContext context, String text) async {
     return await QuickAlert.show(
       context: context,
@@ -45,14 +43,14 @@ class CustomAlert {
       cancelBtnText: 'No',
       confirmBtnColor: Colors.green,
       onConfirmBtnTap: () {
-        Navigator.of(context).pop(true);  // Return true on Yes
+        Navigator.of(context).pop(true); // Return true on Yes
       },
       onCancelBtnTap: () {
         Navigator.of(context).pop(false); // Return false on No
       },
     );
   }
-  // Loading Alert (Manually close using Navigator.pop(context))
+
   static void loading(BuildContext context, String title, String text) {
     QuickAlert.show(
       context: context,
@@ -62,7 +60,7 @@ class CustomAlert {
       barrierDismissible: false, // Prevent dismiss on outside tap
     );
   }
-  // Optional - Generic function to handle Future tasks with loading
+
   static Future performWithLoading({
     required BuildContext context,
     required String loadingText,

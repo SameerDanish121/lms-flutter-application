@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 class InstructorProvider with ChangeNotifier {
   String? type; // "Teacher" or "Junior"
   TeacherInfo? instructor; // TeacherInfo object
@@ -17,7 +18,6 @@ class InstructorProvider with ChangeNotifier {
 
   bool get isInstructorAvailable => instructor != null;
 }
-
 class TeacherInfo {
   final int id;
   final String name;
