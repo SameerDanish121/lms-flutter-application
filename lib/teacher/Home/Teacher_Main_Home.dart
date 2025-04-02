@@ -1,11 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lmsv2/teacher/Home/today_classes.dart';
+import 'package:lmsv2/teacher/MarkAttendance/contest_attendance.dart';
+import 'package:lmsv2/teacher/grader/teacher_grader.dart';
 import 'package:lmsv2/teacher/timetable_teacher.dart';
 import 'package:provider/provider.dart';
-
-import '../../alerts/custom_alerts.dart';
 import '../../provider/instructor_provider.dart';
+import '../course/teacher_course.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -16,9 +18,11 @@ class HomeScreen extends StatelessWidget {
     final formattedDate = DateFormat('MMM d, yyyy').format(now);
     final dayName = DateFormat('EEEE').format(now);
     final currentTime = TimeOfDay.fromDateTime(now);
-
+    late final ScrollController _scrollController;
     return Container(
-      color: const Color(0xFF4448FF),
+      // color: const Color(0xFF4448FF),
+      color: const Color(0xFFFFFFFF),
+
       child: SingleChildScrollView(
         child: Column(
           children: [
@@ -38,7 +42,7 @@ class HomeScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildTimetableHeader(context,formattedDate, dayName),
+                  _buildTimetableHeader(context, formattedDate, dayName),
                   Consumer<InstructorProvider>(
                     builder: (context, instructorProvider, _) {
                       if (!instructorProvider.isInstructorAvailable) {
@@ -47,24 +51,21 @@ class HomeScreen extends StatelessWidget {
                           child: Center(
                             child: Text(
                               'Instructor data not available',
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12),
                             ),
                           ),
                         );
                       }
 
-                      final timetableData = instructorProvider.instructor?.timetable ?? [];
-
+                      final timetableData =
+                          instructorProvider.instructor?.timetable ?? [];
+                      var Holiday = instructorProvider.instructor?.holiday;
                       final todayClasses = timetableData.toList();
 
-                      // Sort timetable by start_time
-                      todayClasses.sort((a, b) {
-                        final aStartTime = a['start_time'] ?? '';
-                        final bStartTime = b['start_time'] ?? '';
-                        return aStartTime.compareTo(bStartTime);
-                      });
 
                       return todayClasses.isEmpty
+                          ? (Holiday == null || Holiday!.isEmpty
                           ? const Padding(
                         padding: EdgeInsets.all(16),
                         child: Center(
@@ -77,56 +78,68 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                       )
+                          : Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Center(
+                          child: Text(
+                            Holiday!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ))
                           : _buildTimetableList(todayClasses, currentTime);
+
                     },
                   ),
                 ],
               ),
             ),
 
-            // Academic Records Section (visible without scrolling)
             _buildHorizontalCardSection(
-              title: 'Academic Records',
-              cards: [
-                CardData(
-                  title: 'Courses',
-                  icon: Icons.book,
-                  color: Colors.blue,
-                ),
-                CardData(
-                  title: 'Grades',
-                  icon: Icons.assessment,
-                  color: Colors.green,
-                ),
-                CardData(
-                  title: 'Attendance',
-                  icon: Icons.date_range,
-                  color: Colors.amber,
-                ),
-              ],
-            ),
+                title: 'Academic Records',
+                cards: [
+                  CardData(
+                    title: 'Courses',
+                    icon: Icons.book,
+                    color: Colors.blue,
+                  ),
+                  CardData(
+                    title: 'Graders',
+                    icon: Icons.assessment,
+                    color: Colors.green,
+                  ),
+                  CardData(
+                    title: 'Attendance',
+                    icon: Icons.date_range,
+                    color: Colors.amber,
+                  ),
+                ],
+                context: context),
 
             // Manage and Track Section (will be in scroll)
             _buildHorizontalCardSection(
-              title: 'Manage and Track',
-              cards: [
-                CardData(
-                  title: 'Attendance',
-                  icon: Icons.assignment,
-                  color: Colors.purple,
-                ),
-                CardData(
-                  title: 'Exams',
-                  icon: Icons.school,
-                  color: Colors.red,
-                ),
-                CardData(
-                  title: 'Resources',
-                  icon: Icons.folder,
-                  color: Colors.teal,
-                ),
-              ],
-            ),
+                title: 'Manage and Track',
+                cards: [
+                  CardData(
+                    title: 'Attendance',
+                    icon: Icons.assignment,
+                    color: Colors.purple,
+                  ),
+                  CardData(
+                    title: 'Contest',
+                    icon: Icons.school,
+                    color: Colors.red,
+                  ),
+                  CardData(
+                    title: 'Task',
+                    icon: Icons.folder,
+                    color: Colors.teal,
+                  ),
+                ],
+                context: context),
 
             // Add some bottom padding
             const SizedBox(height: 16),
@@ -136,116 +149,126 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-
   Widget _buildHorizontalCardSection({
     required String title,
     required List<CardData> cards,
+    required BuildContext context,
   }) {
+    final instructorProvider =
+        Provider.of<InstructorProvider>(context, listen: false);
+    final teacherId = instructorProvider.instructor?.id;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            padding: const EdgeInsets.only(left: 4, bottom: 12, top: 4),
             child: Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF2D3192),
+                letterSpacing: 0.5,
               ),
             ),
           ),
           SizedBox(
-            height: 120,
+            height: 150, // Slightly taller for better balance
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: cards.length,
               itemBuilder: (context, index) {
-                // return Container(
-                //   width: MediaQuery.of(context).size.width * 0.42,
-                //   margin: const EdgeInsets.only(right: 12, bottom: 4),
-                //   decoration: BoxDecoration(
-                //     color: Colors.white,
-                //     borderRadius: BorderRadius.circular(12),
-                //     boxShadow: [
-                //       BoxShadow(
-                //         color: Colors.black.withOpacity(0.1),
-                //         blurRadius: 5,
-                //         offset: const Offset(0, 2),
-                //       ),
-                //     ],
-                //   ),
-                //   child: Column(
-                //     mainAxisAlignment: MainAxisAlignment.center,
-                //     children: [
-                //       Container(
-                //         padding: const EdgeInsets.all(10),
-                //         decoration: BoxDecoration(
-                //           color: cards[index].color.withOpacity(0.2),
-                //           shape: BoxShape.circle,
-                //         ),
-                //         child: Icon(
-                //           cards[index].icon,
-                //           color: cards[index].color,
-                //           size: 24,
-                //         ),
-                //       ),
-                //       const SizedBox(height: 8),
-                //       Text(
-                //         cards[index].title,
-                //         style: const TextStyle(
-                //           fontSize: 14,
-                //           fontWeight: FontWeight.w600,
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // );
                 return InkWell(
                   onTap: () {
-                    // Navigate to the new screen
-                    CustomAlert.info(context, ' Click ty Kam krna piya !');
+                    if (title == 'Manage and Track' &&
+                        cards[index].title == 'Attendance') {
+                      ClassPrompt.showTodayClasses(context, teacherId!);
+                    } else if (title == 'Manage and Track' &&
+                        cards[index].title == 'Contest') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ContestAttendanceScreen()),
+                      );
+
+                    }else if(cards[index].title=='Graders'){
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => GraderInfoScreen()),
+                      );
+                    }else if(cards[index].title=='Courses'){
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => TeacherCoursesScreen()),
+                      );
+                    }
                   },
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
                     width: MediaQuery.of(context).size.width * 0.42,
-                    margin: const EdgeInsets.only(right: 12, bottom: 4),
+                    margin: const EdgeInsets.only(right: 16, bottom: 4, top: 4),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.1),
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
+                      border: Border.all(
+                        color: Colors.grey.withOpacity(0.15),
+                        width: 1,
+                      ),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: cards[index].color.withOpacity(0.2),
-                            shape: BoxShape.circle,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              // color: cards[index].color.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Image.asset(
+                              'assets/iconsv3.png',
+                              width: 42,
+                              height: 42,
+                              // Removed the color parameter to keep original colors
+                            ),
                           ),
-                          child: Icon(
-                            cards[index].icon,
-                            color: cards[index].color,
-                            size: 24,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                cards[index].title,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'View details',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          cards[index].title,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -257,6 +280,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+
 class CardData {
   final String title;
   final IconData icon;
@@ -268,7 +292,8 @@ class CardData {
     required this.color,
   });
 }
-Widget _buildTimetableHeader(BuildContext context,String date, String day) {
+
+Widget _buildTimetableHeader(BuildContext context, String date, String day) {
   return Padding(
     padding: const EdgeInsets.all(12),
     child: Column(
@@ -332,6 +357,7 @@ Widget _buildTimetableHeader(BuildContext context,String date, String day) {
     ),
   );
 }
+
 Widget _buildTimetableList(List<dynamic> timetable, TimeOfDay currentTime) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -411,7 +437,7 @@ Widget _buildTimetableList(List<dynamic> timetable, TimeOfDay currentTime) {
             ],
           ),
           // Set a fixed height to make exactly one row of cards visible without scrolling
-          height: 120,
+          height: 155,
           child: ListView.builder(
             shrinkWrap: true,
             padding: EdgeInsets.zero,
@@ -425,11 +451,7 @@ Widget _buildTimetableList(List<dynamic> timetable, TimeOfDay currentTime) {
               final String startTime = item['start_time'] ?? '';
               final String endTime = item['end_time'] ?? '';
               final String section = item['section'];
-
-              // Check if this is the current class
               bool isCurrentClass = _isCurrentTimeSlot(startTime, endTime);
-
-              // Use abbreviation for course name if it's too long
               final displayCourseName = courseName.length > 4
                   ? courseName.substring(0, 4)
                   : courseName;
@@ -438,12 +460,13 @@ Widget _buildTimetableList(List<dynamic> timetable, TimeOfDay currentTime) {
                 decoration: BoxDecoration(
                   color: isCurrentClass
                       ? const Color(0xFFE3F2FD)
-                      : (index % 2 == 0 ? Colors.white : const Color(0xFFF5F5F5)),
+                      : const Color(0xFFF5F5F5),
                   border: Border(
                     bottom: BorderSide(color: Colors.grey[300]!),
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 child: Row(
                   children: [
                     Expanded(
@@ -454,7 +477,6 @@ Widget _buildTimetableList(List<dynamic> timetable, TimeOfDay currentTime) {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -506,20 +528,32 @@ Widget _buildTimetableList(List<dynamic> timetable, TimeOfDay currentTime) {
     ),
   );
 }
+
 String _formatTimeDisplay(String startTime, String endTime) {
   final start = startTime.split(':').take(2).join(':');
   final end = endTime.split(':').take(2).join(':');
   return '$start - $end';
 }
-bool _isCurrentTimeSlot(String startTimeStr, String endTimeStr) {
+
+bool _isCurrentTimeSlot(String startTime, String endTime) {
   try {
     final now = DateTime.now();
-    final currentTimeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:00';
+    final hm = now.hour % 12 == 0 ? 12 : now.hour % 12;
+    final current = hm * 3600 + now.minute * 60 + now.second;
+    int parseTime(String t) {
+      final parts = t.split(':').map(int.parse).toList();
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
 
-    // Simple string comparison since all times are in 24-hour format (08:00:00)
-    return currentTimeStr.compareTo(startTimeStr) >= 0 &&
-        currentTimeStr.compareTo(endTimeStr) <= 0;
-  } catch (e) {
+    final start = parseTime(startTime);
+    final end = parseTime(endTime);
+
+    return start <= end
+        ? current >= start && current <= end
+        : current >= start || current <= end;
+  } catch (_) {
     return false;
   }
 }
+
+// Helper: Directly compares time strings in "H:mm:ss" format

@@ -16,6 +16,7 @@ import '../teacher/Teacher_Home.dart';
 
 class SplashServices{
   Future<void> isLogin(BuildContext context) async {
+
     // First try to get stored credentials
     bool hasCredentials = false;
     String? username;
@@ -24,7 +25,10 @@ class SplashServices{
     try {
       final prefs = await SharedPreferences.getInstance();
       final rememberMe = prefs.getBool('rememberMe') ?? false;
-
+      if(prefs.containsKey('apiBaseUrl')){
+        var n=prefs.getString('apiBaseUrl') as String;
+        ApiConfig.apiBaseUrl=n;
+      }
       if (rememberMe) {
         username = prefs.getString('username');
         password = prefs.getString('password');
@@ -54,8 +58,7 @@ class SplashServices{
               'password': password,
             },
           ),
-        ).timeout(Duration(seconds: 10)); // Add timeout to prevent indefinite waiting
-        // Close loading dialog
+        ).timeout(Duration(seconds: 20)); // Add timeout to prevent indefinite waiting
         Navigator.pop(context);
         CustomAlert.loading(context, 'Auto-login', 'sameer danish');
         if (response.statusCode == 200) {

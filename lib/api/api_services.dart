@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'ApiConfig.dart'; // Ensure this is correctly imported
+
 class ApiServices {
+
   static Future<Map<String, dynamic>> verifyLoginOTP(int userId, int otp) async {
     try {
       // Create URI for the endpoint
@@ -39,6 +41,7 @@ class ApiServices {
       throw Exception('Error verifying OTP: ${e.toString()}');
     }
   }
+
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
       final response = await http.post(
@@ -56,6 +59,7 @@ class ApiServices {
       throw Exception('Network error: $e');
     }
   }
+
   static Future<Map<String, dynamic>> verifyOtp(String userId, String otp) async {
     try {
       final response = await http.post(
@@ -73,6 +77,7 @@ class ApiServices {
       throw Exception('Network error: $e');
     }
   }
+
   static Future<Map<String, dynamic>> updatePassword(String userId, String newPassword) async {
     try {
       final response = await http.post(
@@ -90,12 +95,14 @@ class ApiServices {
       throw Exception('Network error: $e');
     }
   }
+
   static Future<http.Response> sendOtp(String email) async {
     final url = Uri.parse("${ApiConfig.apiBaseUrl}forgot-password");
     return await http.post(url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}));
   }
+
   static Future<void> storeFcmTokens(int userId) async {
     try {
       // Get the FCM token from Firebase Messaging
@@ -142,6 +149,7 @@ class ApiServices {
       print('Error storing FCM token: $e');
     }
   }
+
   static Future<http.Response> storeFcmToken(String userId, String token) async {
     final url = Uri.parse("${ApiConfig.apiBaseUrl}store-fcmtoken");
     return await http.post(url,

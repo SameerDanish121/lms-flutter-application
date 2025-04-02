@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:quickalert/quickalert.dart';
+
 class CustomAlert {
+
   static void success(BuildContext context, String text) {
     QuickAlert.show(
       context: context,

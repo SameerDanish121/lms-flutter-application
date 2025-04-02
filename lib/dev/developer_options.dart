@@ -7,12 +7,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
 import 'package:lmsv2/auth/login_screen.dart';
 import 'package:quickalert/quickalert.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../alerts/custom_alerts.dart';
+
 class SecretScreen extends StatefulWidget {
   const SecretScreen({super.key});
   @override
   _SecretScreenState createState() => _SecretScreenState();
 }
+
 class _SecretScreenState extends State<SecretScreen> {
   final TextEditingController _urlController = TextEditingController();
   String _currentBaseUrl = ApiConfig.apiBaseUrl; // Get from ApiConfig
@@ -69,6 +72,7 @@ class _SecretScreenState extends State<SecretScreen> {
       });
     }
   }
+
   void _showAuthenticationDialog() {
     String password = '';
     QuickAlert.show(
@@ -95,15 +99,18 @@ class _SecretScreenState extends State<SecretScreen> {
       confirmBtnText: 'Submit',
       cancelBtnText: 'Cancel',
       confirmBtnColor: Color(0xFF3969D7),
-      onConfirmBtnTap: () {
+      onConfirmBtnTap: () async {
         if (password == '123') {
-          // Using '123' as password as requested
-          Navigator.pop(context); // Close the QuickAlert
 
+          Navigator.pop(context); // Close the QuickAlert
           // Update the API URL
-          setState(() {
-            _currentBaseUrl = _urlController.text;
+          _currentBaseUrl = _urlController.text;
+          var sf=await SharedPreferences.getInstance();
+          sf.setString('apiBaseUrl', _currentBaseUrl);
+          setState(()  {
+
             ApiConfig.apiBaseUrl = _currentBaseUrl;
+
           });
 
           CustomAlert.success(context, "Base URL updated successfully!");
