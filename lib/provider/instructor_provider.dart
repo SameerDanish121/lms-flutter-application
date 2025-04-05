@@ -172,7 +172,6 @@ class InstructorProvider with ChangeNotifier {
   Future<void> logout() async {
     clearInstructor();
   }
-
   Future<void> pickAndUploadImage() async {
     try {
       final picker = ImagePicker();
@@ -214,7 +213,6 @@ class InstructorProvider with ChangeNotifier {
       throw Exception('Failed to upload image: $e');
     }
   }
-
   bool get isInstructorAvailable => instructor != null;
 }
 
@@ -263,7 +261,6 @@ class TeacherInfo {
       holiday: json['Holiday'] ?? '',
       email: json['email'] ?? '',
       week: json['week'] is int ? json['week'] : int.tryParse(json['week'] ?? '0') ?? 0,
-
     );
   }
 

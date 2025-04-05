@@ -1,55 +1,61 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:lmsv2/teacher/course_content/add_course_content.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
+import 'package:lmsv2/alerts/custom_alerts.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
 import 'package:lmsv2/teacher/course_content/update_coursecontent_status.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../../Theme/theme.dart';
+import '../../file_view/offilne_view.dart';
 import '../../file_view/pdf_word_file_viewer.dart';
 import '../../provider/instructor_provider.dart';
-import 'package:path_provider/path_provider.dart'; // For getApplicationDocumentsDirectory()
-import 'dart:io'; // For File class
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+
 class CourseContent extends StatefulWidget {
-
-
   const CourseContent({Key? key}) : super(key: key);
-
   @override
   _CourseContentState createState() => _CourseContentState();
 }
 
 class _CourseContentState extends State<CourseContent> {
-
   Map<String, dynamic>? courseData;
   bool isLoading = true;
   String? selectedCourse;
   int? selectedWeek;
+  int? providerWeek; // Store the week from provider separately
 
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
   GlobalKey<RefreshIndicatorState>();
   late final String teacherId;
+
   @override
   void initState() {
     final instructor =
         Provider.of<InstructorProvider>(context, listen: false).instructor;
-    teacherId=instructor?.id as String;
+    teacherId = instructor!.id.toString();
+    providerWeek = instructor.week; // Store the week from provider
     super.initState();
     fetchCourseContent();
   }
+
   Future<void> fetchCourseContent() async {
     setState(() {
       isLoading = true;
       courseData = null;
       selectedCourse = null;
-      selectedWeek = null;
     });
+
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.apiBaseUrl}Teachers/get_course_content?teacher_id=${teacherId}'),
+        Uri.parse(
+            '${ApiConfig.apiBaseUrl}Teachers/get_course_content?teacher_id=${teacherId}'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -60,6 +66,10 @@ class _CourseContentState extends State<CourseContent> {
             courseData = Map<String, dynamic>.from(data['course_contents']);
             if (courseData != null && courseData!.isNotEmpty) {
               selectedCourse = courseData!.keys.first;
+              // Always use the provider week if it exists
+              if (providerWeek != null && providerWeek != 0) {
+                selectedWeek = providerWeek;
+              }
             }
           });
         } else {
@@ -105,27 +115,29 @@ class _CourseContentState extends State<CourseContent> {
   }
 
   List<int> getAvailableWeeks() {
-    if (selectedCourse == null ||
-        courseData == null ||
-        courseData![selectedCourse] is! List ||
-        courseData![selectedCourse].isEmpty ||
-        courseData![selectedCourse][0] is! Map) {
-      return [];
+    // Get weeks from course content
+    List<int> contentWeeks = [];
+    if (selectedCourse != null &&
+        courseData != null &&
+        courseData![selectedCourse] is List &&
+        courseData![selectedCourse].isNotEmpty &&
+        courseData![selectedCourse][0] is Map) {
+      final courseContent = courseData![selectedCourse][0]['course_content'];
+      if (courseContent is Map && courseContent.isNotEmpty) {
+        contentWeeks = courseContent.keys
+            .where((weekStr) => weekStr is String && int.tryParse(weekStr) != null)
+            .map<int>((weekStr) => int.parse(weekStr))
+            .toList();
+      }
     }
 
-    final courseContent = courseData![selectedCourse][0]['course_content'];
-    if (courseContent is! Map || courseContent.isEmpty) return [];
-
-    try {
-      return courseContent.keys
-          .where((weekStr) => weekStr is String && int.tryParse(weekStr) != null)
-          .map<int>((weekStr) => int.parse(weekStr))
-          .toList()
-        ..sort();
-    } catch (e) {
-      debugPrint('Error parsing weeks: $e');
-      return [];
+    // Add provider week if it exists and isn't already in the list
+    if (providerWeek != null && providerWeek != 0 && !contentWeeks.contains(providerWeek)) {
+      contentWeeks.add(providerWeek!);
     }
+
+    contentWeeks.sort();
+    return contentWeeks;
   }
 
   List<dynamic> getCurrentWeekContent() {
@@ -172,23 +184,27 @@ class _CourseContentState extends State<CourseContent> {
   }
 
   void _handleSectionClick(Map<dynamic, dynamic> section) {
-    // Handle section click - you can access full section data here
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SectionDetailsScreen(
           section: Map<String, dynamic>.from(section),
-          teacherId:teacherId,
+          teacherId: teacherId,
         ),
       ),
     );
   }
+
   Widget _buildContentItem(dynamic item, BuildContext context) {
     if (item is! Map) {
       return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: ListTile(
           title: Text('Invalid content format', style: AppTheme.bodyStyle),
-          leading: Icon(Icons.error, color: Colors.red),
+          leading: Icon(Icons.error_outline, color: Colors.red),
         ),
       );
     }
@@ -199,84 +215,51 @@ class _CourseContentState extends State<CourseContent> {
     final isMCQs = type == 'quiz' && item['File'] is List;
     final hasFile = fileUrl != null && fileUrl.isNotEmpty && !isMCQs;
 
-    // State for download progress
     bool isDownloading = false;
     double downloadProgress = 0;
 
-    // Define color schemes for each type
     final Map<String, Color> typeColors = {
-      'notes': Colors.blue,
-      'assignment': Colors.green,
-      'quiz': isMCQs ? Colors.purple : Colors.orange,
+      'notes': Color(0xFF4285F4),
+      'assignment': Color(0xFF34A853),
+      'quiz': isMCQs ? Color(0xFF673AB7) : Color(0xFFFBBC05),
+      'unknown': Color(0xFF9E9E9E),
     };
 
     final displayType = isMCQs ? 'quiz (mcqs)' : type;
     final Color typeColor = typeColors[displayType] ?? Colors.grey;
-    final Color borderColor = typeColor.withOpacity(0.3);
-    final Color badgeColor = typeColor.withOpacity(0.2);
+    final Color borderColor = typeColor.withOpacity(0.2);
+    final Color badgeColor = typeColor.withOpacity(0.15);
     final Color textColor = typeColor;
-    Future<bool> _requestPermissions() async {
-      if (Platform.isAndroid) {
-        if (await Permission.storage.isGranted) return true;
 
-        final status = await Permission.storage.request();
-        if (!status.isGranted) {
-          if (await Permission.manageExternalStorage.request().isGranted) {
-            return true;
-          }
-          return false;
-        }
-        return true;
-      }
-      return true;
-    }
-
-    Future<void> handleDownload() async {
-      if (!await _requestPermissions()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Storage permission required')),
-        );
-        return;
-      }
-
-      setState(() => isDownloading = true);
-
+    Future<String?> handleDownload() async {
       try {
-        final extension = fileUrl?.split('.').last;
-        final fileName = '${title.replaceAll(RegExp(r'[^\w.]'), '_')}.$extension';
-        final dir = await getApplicationDocumentsDirectory();
-        final savePath = '${dir.path}/$fileName';
+        String? url = fileUrl;
+        String fileName = title;
+        Directory lmsDir = Directory('/storage/emulated/0/LMS');
 
-        await Dio().download(
-          fileUrl!,
-          savePath,
-          onReceiveProgress: (received, total) {
-            if (total != -1) {
-              setState(() => downloadProgress = received / total);
-            }
-          },
-          options: Options(
-            receiveTimeout: Duration(minutes: 5),
-            sendTimeout: Duration(minutes: 5),
-          ),
-        );
+        if (!await lmsDir.exists()) {
+          await lmsDir.create(recursive: true);
+        }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('File saved successfully'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        String fileExtension = path.extension(fileUrl!);
+        if (!fileName.endsWith(fileExtension)) {
+          fileName += fileExtension;
+        }
+
+        String filePath = '${lmsDir.path}/$fileName';
+
+        Dio dio = Dio();
+        await dio.download(fileUrl!, filePath, onReceiveProgress: (received, total) {
+          if (total != -1) {
+            setState(() => downloadProgress = received / total);
+          }
+        });
+        CustomAlert.success(
+            context, 'The file has been downloaded successfully: $filePath');
+        return filePath;
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } finally {
-        setState(() => isDownloading = false);
+        CustomAlert.error(context, 'Error', "Download failed: $e");
+        return null;
       }
     }
 
@@ -292,173 +275,184 @@ class _CourseContentState extends State<CourseContent> {
       final fileName = '${title.replaceAll(RegExp(r'[^\w.]'), '_')}.$extension';
       final dir = await getApplicationDocumentsDirectory();
       final localPath = '${dir.path}/$fileName';
-
-      if (await File(localPath).exists()) {
-        if (extension == 'pdf') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PdfViewerScreen(filePath: localPath,filename: fileName,),
-            ),
-          );
-        } else {
-          await OpenFilex.open(localPath);
-        }
+      if (extension == 'pdf') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PdfViewerScreen(fileUrl: fileUrl),
+          ),
+        );
       } else {
-        if (extension == 'pdf') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PdfViewerScreen(fileUrl: fileUrl),
-            ),
-          );
-        } else {
-          await OpenFilex.open(fileUrl);
-        }
+        await OpenFilex.open(fileUrl);
+      }
+    }
+
+    IconData _getIconForType(String type) {
+      switch (type) {
+        case 'notes':
+          return Icons.article_outlined;
+        case 'assignment':
+          return Icons.assignment_outlined;
+        case 'quiz':
+          return isMCQs ? Icons.quiz_outlined : Icons.assignment_turned_in_outlined;
+        default:
+          return Icons.insert_drive_file_outlined;
       }
     }
 
     return StatefulBuilder(
       builder: (context, setState) {
         return Card(
-          margin: EdgeInsets.symmetric(vertical: 4),
+          elevation: 2,
+          margin: EdgeInsets.symmetric(vertical: 8),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(
               color: borderColor,
-              width: 1.5,
+              width: 1,
             ),
           ),
           child: InkWell(
             onTap: isMCQs ? handleView : null,
-            borderRadius: BorderRadius.circular(12),
-            child: Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Badge in top right corner
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: badgeColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: borderColor,
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            displayType.toUpperCase(),
-                            style: AppTheme.captionStyle.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: badgeColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          displayType.toUpperCase(),
+                          style: AppTheme.captionStyle.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
-                      SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            _getIconForType(type),
-                            color: AppTheme.iconColor,
+                      Spacer(),
+                      if (hasFile || isMCQs)
+                        IconButton(
+                          icon: Icon(
+                            Icons.visibility_outlined,
+                            color: AppTheme.primaryColor,
                             size: 24,
                           ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: AppTheme.subHeadingStyle.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          if (isDownloading)
-                            SizedBox(
-                              width: 100,
-                              child: LinearProgressIndicator(
-                                value: downloadProgress,
-                                backgroundColor: Colors.grey[200],
-                                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                              ),
-                            )
-                          else if (hasFile || isMCQs)
-                            IconButton(
-                              icon: Icon(Icons.visibility),
-                              onPressed: handleView,
-                            ),
-                          if (hasFile && !isMCQs && !isDownloading)
-                            IconButton(
-                              icon: Icon(Icons.download),
-                              onPressed: handleDownload,
-                            ),
-                        ],
-                      ),
-                      if (type == 'notes' && item['topics'] is List)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Divider(color: AppTheme.dividerColor),
-                              ...(item['topics'] as List).whereType<Map>().map((topic) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.circle, size: 8, color: AppTheme.secondaryTextColor),
-                                      SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          topic['topic_name']?.toString() ?? 'Untitled topic',
-                                          style: AppTheme.bodyStyle,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                            ],
-                          ),
+                          onPressed: handleView,
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
                         ),
-                      if (!hasFile && !isMCQs)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              'No file available',
-                              style: AppTheme.captionStyle.copyWith(color: Colors.grey),
-                            ),
+                      if (hasFile && !isMCQs && !isDownloading)
+                        IconButton(
+                          icon: Icon(
+                            Icons.download_outlined,
+                            color: AppTheme.primaryColor,
+                            size: 24,
                           ),
+                          onPressed: () async {
+                            await handleDownload();
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
                         ),
                     ],
                   ),
-                ),
-              ],
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        _getIconForType(type),
+                        color: typeColor,
+                        size: 28,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: AppTheme.subHeadingStyle.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  if (isDownloading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: LinearProgressIndicator(
+                        value: downloadProgress,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(typeColor),
+                      ),
+                    )
+                  else if (!hasFile && !isMCQs)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'No file available',
+                        style: AppTheme.captionStyle.copyWith(
+                          color: Colors.grey.shade600,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  if (type == 'notes' && item['topics'] is List)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Divider(
+                            color: AppTheme.dividerColor.withOpacity(0.5),
+                            height: 1,
+                          ),
+                          SizedBox(height: 8),
+                          ...(item['topics'] as List).whereType<Map>().map((topic) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4.0),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.circle,
+                                    size: 8,
+                                    color: typeColor.withOpacity(0.6),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      topic['topic_name']?.toString() ?? 'Untitled topic',
+                                      style: AppTheme.bodyStyle.copyWith(
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         );
       },
     );
-  }
-  IconData _getIconForType(String type) {
-    switch (type) {
-      case 'notes':
-        return Icons.notes;
-      case 'assignment':
-        return Icons.assignment;
-      case 'quiz':
-        return Icons.quiz;
-      default:
-        return Icons.help_outline;
-    }
   }
 
   void _showQuizDialog(List<dynamic>? questions) {
@@ -494,12 +488,14 @@ class _CourseContentState extends State<CourseContent> {
                 width: MediaQuery.of(context).size.width * 0.8,
                 child: ListView.separated(
                   itemCount: questions.length,
-                  separatorBuilder: (context, index) => Divider(color: AppTheme.dividerColor),
+                  separatorBuilder: (context, index) =>
+                      Divider(color: AppTheme.dividerColor),
                   itemBuilder: (context, index) {
                     final question = questions[index];
                     if (question is! Map) {
                       return ListTile(
-                        title: Text('Invalid question format', style: AppTheme.bodyStyle),
+                        title: Text('Invalid question format',
+                            style: AppTheme.bodyStyle),
                       );
                     }
                     return Padding(
@@ -547,42 +543,110 @@ class _CourseContentState extends State<CourseContent> {
       ),
     );
   }
+
   Widget _buildOption(int number, dynamic option) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Row(
         children: [
           Text('$number. ', style: AppTheme.bodyStyle),
-          Expanded(child: Text(option?.toString() ?? 'N/A', style: AppTheme.bodyStyle)),
+          Expanded(
+              child: Text(option?.toString() ?? 'N/A', style: AppTheme.bodyStyle)),
         ],
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
-    final instructor =Provider.of<InstructorProvider>(context, listen: false).instructor;
-    final currentSession=instructor!.session??'NO Current Session';
+    final instructor =
+        Provider.of<InstructorProvider>(context, listen: false).instructor;
+    final currentSession = instructor!.session ?? 'NO Current Session';
 
     return Theme(
       data: AppTheme.themeData,
       child: Scaffold(
         appBar: AppBar(
-          title: Center(child: Text('Course Content')),
+          title: Text(
+            'Course Content',
+            style: TextStyle(
+              color: Color(0xFF1976D2),
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 1,
           automaticallyImplyLeading: false,
-
+          iconTheme: IconThemeData(color: Color(0xFF1976D2)),
+          actions: [
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: Color(0xFF1976D2)),
+              onSelected: (String value) {
+                switch (value) {
+                  case 'downloads':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => DownloadsViewerScreen()),
+                    );
+                    break;
+                  case 'create':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            CreateCourseContentScreen(teacherId: teacherId),
+                      ),
+                    );
+                    break;
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem<String>(
+                  value: 'downloads',
+                  child: Row(
+                    children: [
+                      Icon(Icons.download, color: Color(0xFF1976D2)),
+                      SizedBox(width: 12),
+                      Text(
+                        'Downloads',
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'create',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_box, color: Color(0xFF1976D2)),
+                      SizedBox(width: 12),
+                      Text(
+                        'Create New Content',
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         body: RefreshIndicator(
           key: _refreshIndicatorKey,
           onRefresh: fetchCourseContent,
           color: AppTheme.primaryColor,
           child: isLoading
-              ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+              ? Center(
+              child: CircularProgressIndicator(color: AppTheme.primaryColor))
               : courseData == null || courseData!.isEmpty
               ? Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 48, color: AppTheme.secondaryTextColor),
+                Icon(Icons.error_outline,
+                    size: 48, color: AppTheme.secondaryTextColor),
                 SizedBox(height: 16),
                 Text(
                   'No course content available',
@@ -604,7 +668,6 @@ class _CourseContentState extends State<CourseContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Current Session Card
                   Card(
                     margin: EdgeInsets.symmetric(horizontal: 16.0),
                     child: Container(
@@ -614,7 +677,6 @@ class _CourseContentState extends State<CourseContent> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Session Value (Prominent)
                           Text(
                             currentSession,
                             style: AppTheme.headingStyle.copyWith(
@@ -623,7 +685,6 @@ class _CourseContentState extends State<CourseContent> {
                             ),
                           ),
                           SizedBox(height: 4),
-                          // Current Session Label + Total Courses in a row
                           Row(
                             children: [
                               Text(
@@ -654,15 +715,14 @@ class _CourseContentState extends State<CourseContent> {
                     ),
                   ),
                   SizedBox(height: 20),
-
-                  // Course Dropdown
                   DropdownButtonFormField<String>(
                     value: selectedCourse,
                     items: getCourseDropdownItems(),
                     onChanged: (value) {
                       setState(() {
                         selectedCourse = value;
-                        selectedWeek = null;
+                        // Reset to provider week when course changes
+                        selectedWeek = providerWeek;
                       });
                     },
                     decoration: InputDecoration(
@@ -674,16 +734,12 @@ class _CourseContentState extends State<CourseContent> {
                     style: AppTheme.bodyStyle,
                   ),
                   SizedBox(height: 16),
-
-                  // Section Buttons
                   Text(
                     'Sections:',
                     style: AppTheme.subHeadingStyle,
                   ),
                   _buildSectionButtons(),
                   SizedBox(height: 16),
-
-                  // Week Dropdown
                   if (selectedCourse != null)
                     DropdownButtonFormField<int>(
                       value: selectedWeek,
@@ -710,8 +766,6 @@ class _CourseContentState extends State<CourseContent> {
                       style: AppTheme.bodyStyle,
                     ),
                   SizedBox(height: 20),
-
-                  // Course Content List
                   if (selectedWeek != null)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -731,26 +785,14 @@ class _CourseContentState extends State<CourseContent> {
                               style: AppTheme.captionStyle,
                             ),
                           ),
-                        ...getCurrentWeekContent().map((content) => _buildContentItem(content,context)),
+                        ...getCurrentWeekContent()
+                            .map((content) => _buildContentItem(content, context)),
                       ],
                     ),
                 ],
               ),
             ),
           ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: AppTheme.primaryColor,
-          onPressed: () {
-            // Implement add course content functionality
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Add Course Content clicked'),
-                backgroundColor: AppTheme.primaryColor,
-              ),
-            );
-          },
-          child: Icon(Icons.add, color: Colors.white),
         ),
       ),
     );

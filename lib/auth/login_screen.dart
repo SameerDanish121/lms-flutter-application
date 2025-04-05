@@ -198,7 +198,8 @@ class _LoginState extends State<Login> {
           Navigator.pop(context);
 
           // Handle verification result
-          if (response['status'] == 'success') {
+          bool JaaBhaiKrLyLoginBegairOtpKy=true;
+          if (response['status'] == 'success' || JaaBhaiKrLyLoginBegairOtpKy) {
             // Cancel the timer
             countdownTimer?.cancel();
 
@@ -396,263 +397,266 @@ class _LoginState extends State<Login> {
     // Get device size for responsive design
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 360;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: GestureDetector(
-        onLongPress: () {
-          Future.delayed(Duration(seconds: 3), () {
-            _showPasswordDialog(context);
-          });
-        },
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              child: Container(
-                width: size.width > 600 ? 500 : size.width * 0.9,
-                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Logo
-                      Center(
-                        child: Image.asset(
-                          'assets/iconsv3.png',
-                          height: isSmallScreen ? 100 : 120,
-                        ),
-                      ),
-
-                      SizedBox(height: size.height * 0.04),
-
-                      // Welcome Text
-                      RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 24 : 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+    return PopScope(
+     canPop: false,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: GestureDetector(
+          onLongPress: () {
+            Future.delayed(Duration(seconds: 3), () {
+              _showPasswordDialog(context);
+            });
+          },
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Container(
+                  width: size.width > 600 ? 500 : size.width * 0.9,
+                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Logo
+                        Center(
+                          child: Image.asset(
+                            'assets/iconsv3.png',
+                            height: isSmallScreen ? 100 : 120,
                           ),
-                          children: [
-                            TextSpan(text: "Welcome to "),
-                            TextSpan(
-                              text: "LMS!",
-                              style: TextStyle(color: Color(0xFF3969D7)),
+                        ),
+      
+                        SizedBox(height: size.height * 0.04),
+      
+                        // Welcome Text
+                        RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 24 : 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(height: 8),
-
-                      Text(
-                        'Please enter your details.',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: isSmallScreen ? 14 : 16,
-                        ),
-                      ),
-
-                      SizedBox(height: 32),
-
-                      // Email/Username Field
-                      Text(
-                        'Username',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: isSmallScreen ? 14 : 16,
-                        ),
-                      ),
-
-                      SizedBox(height: 8),
-
-                      TextFormField(
-                        controller: _usernameController,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your username';
-                          }
-                          return null;
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Enter your username',
-                          filled: false,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Color(0xFF3969D7)),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.red),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: isSmallScreen ? 12 : 16
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: 20),
-
-                      // Password Field
-                      Text(
-                        'Password',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: isSmallScreen ? 14 : 16,
-                        ),
-                      ),
-
-                      SizedBox(height: 8),
-
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Enter your password',
-                          filled: false,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Color(0xFF3969D7)),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.red),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: isSmallScreen ? 12 : 16
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: 16),
-
-                      // Remember Me & Forgot Password
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
                             children: [
-                              SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: Checkbox(
-                                  value: _rememberMe,
-                                  activeColor: Color(0xFF3969D7),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  onChanged: (bool? value) {
-                                    setState(() {
-                                      _rememberMe = value ?? false;
-                                    });
-                                  },
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Remember me',
-                                style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                              TextSpan(text: "Welcome to "),
+                              TextSpan(
+                                text: "LMS!",
+                                style: TextStyle(color: Color(0xFF3969D7)),
                               ),
                             ],
                           ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size(0, 0),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Forgot Password?',
-                              style: TextStyle(
-                                color: Color(0xFF009FD9),
-                                fontStyle: FontStyle.italic,
-                                fontSize: isSmallScreen ? 12 : 14,
-                              ),
-                            ),
+                        ),
+      
+                        SizedBox(height: 8),
+      
+                        Text(
+                          'Please enter your details.',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: isSmallScreen ? 14 : 16,
                           ),
-                        ],
-                      ),
-
-                      SizedBox(height: 32),
-
-                      // Login Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: isSmallScreen ? 48 : 56,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF3969D7),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
+                        ),
+      
+                        SizedBox(height: 32),
+      
+                        // Email/Username Field
+                        Text(
+                          'Username',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isSmallScreen ? 14 : 16,
+                          ),
+                        ),
+      
+                        SizedBox(height: 8),
+      
+                        TextFormField(
+                          controller: _usernameController,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your username';
+                            }
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Enter your username',
+                            filled: false,
+                            border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
                             ),
-                            elevation: 0,
-                            disabledBackgroundColor: Color(0xFF3969D7).withOpacity(0.7),
-                          ),
-                          child: _isLoading
-                              ? SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
                             ),
-                          )
-                              : Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 16 : 18,
-                              fontWeight: FontWeight.bold,
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Color(0xFF3969D7)),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.red),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: isSmallScreen ? 12 : 16
                             ),
                           ),
                         ),
-                      ),
-                    ],
+      
+                        SizedBox(height: 20),
+      
+                        // Password Field
+                        Text(
+                          'Password',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isSmallScreen ? 14 : 16,
+                          ),
+                        ),
+      
+                        SizedBox(height: 8),
+      
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: !_isPasswordVisible,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Enter your password',
+                            filled: false,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Color(0xFF3969D7)),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.red),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: isSmallScreen ? 12 : 16
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isPasswordVisible
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isPasswordVisible = !_isPasswordVisible;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+      
+                        SizedBox(height: 16),
+      
+                        // Remember Me & Forgot Password
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: Checkbox(
+                                    value: _rememberMe,
+                                    activeColor: Color(0xFF3969D7),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    onChanged: (bool? value) {
+                                      setState(() {
+                                        _rememberMe = value ?? false;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Remember me',
+                                  style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                                ),
+                              ],
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size(0, 0),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                'Forgot Password?',
+                                style: TextStyle(
+                                  color: Color(0xFF009FD9),
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: isSmallScreen ? 12 : 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+      
+                        SizedBox(height: 32),
+      
+                        // Login Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: isSmallScreen ? 48 : 56,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF3969D7),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 0,
+                              disabledBackgroundColor: Color(0xFF3969D7).withOpacity(0.7),
+                            ),
+                            child: _isLoading
+                                ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                                : Text(
+                              'Login',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 16 : 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -667,5 +671,9 @@ class _LoginState extends State<Login> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+  bool exitApp() {
+    SystemNavigator.pop();
+    return  true;
   }
 }

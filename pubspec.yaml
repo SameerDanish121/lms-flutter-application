@@ -57,6 +57,10 @@ dependencies:
   open_filex: ^4.7.0
   pdfx: ^2.6.0
   path_provider: ^2.1.5
+  share_plus: ^10.1.4
+  file_picker: ^8.3.2
+  video_player: ^2.9.5
+  fluttertoast: ^8.2.12
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import '../../alerts/custom_alerts.dart';
@@ -24,7 +27,8 @@ class _NotificationScreenState extends State<NotificationScreen>
   final Color cardColor = const Color(0xFFE3F2FD);
   final Color textColor = const Color(0xFF263238);
   final Color secondaryTextColor = const Color(0xFF546E7A);
-
+  double _downloadProgress = 0.0;  // Tracks download progress (0.0 to 1.0)
+  bool _isDownloading = false;
   bool _isLoading = true;
   List<NotificationModel> _notifications = [];
   final TextEditingController _titleController = TextEditingController();
@@ -44,7 +48,81 @@ class _NotificationScreenState extends State<NotificationScreen>
       TextEditingController();
   List<Map<String, dynamic>> _filteredRecipients = [];
   bool _isLoadingRecipients = false;
+  Future<void> _saveToCustomFolder(String imageUrl) async {
+    try {
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Downloading image...',
+      //         style: TextStyle(color: Colors.white)),
+      //     backgroundColor: Colors.blue,
+      //     duration: Duration(seconds: 2),
+      //   ),
+      // );
+CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
+      // Create LMS directory if it doesn't exist
+      final lmsDir = Directory('/storage/emulated/0/LMS');
+      if (!await lmsDir.exists()) {
+        await lmsDir.create(recursive: true);
+      }
 
+      // Generate filename with timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileExtension = imageUrl.split('.').last;
+      final filePath = '${lmsDir.path}/image_$timestamp.$fileExtension';
+
+      // Download and save the image
+      await Dio().download(
+        imageUrl,
+        filePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+          }
+        },
+      );
+      Navigator.pop(context);
+      CustomAlert.success(context, 'Image Saved to Downloads');
+    } catch (e) {
+      Navigator.pop(context);
+
+     CustomAlert.error(context, 'Failed to save',e.toString());
+    }
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        TextButton.icon(
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+            ),),
+          onPressed: _isDownloading ? null : onPressed,
+          icon: Icon(icon, size: 20),
+          label: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        if (_isDownloading)
+          CircularProgressIndicator(
+            value: _downloadProgress,
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+      ],
+    );
+  }
   // Image picker variables
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
@@ -65,6 +143,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       _fetchAllSections();
     });
   }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -74,6 +153,7 @@ class _NotificationScreenState extends State<NotificationScreen>
     _recipientSearchController.dispose();
     super.dispose();
   }
+
   Future<void> _fetchNotifications() async {
     setState(() => _isLoading = true);
     try {
@@ -117,6 +197,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       _showErrorSnackBar('Error: ${e.toString()}');
     }
   }
+
   Future<void> _fetchAllStudents() async {
     setState(() => _isLoadingRecipients = true);
     try {
@@ -147,6 +228,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       _showErrorSnackBar('Failed to load students: ${e.toString()}');
     }
   }
+
   Future<void> _fetchAllSections() async {
     setState(() => _isLoadingRecipients = true);
     try {
@@ -175,6 +257,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       _showErrorSnackBar('Failed to load sections: ${e.toString()}');
     }
   }
+
   Future<void> _pickImageFromGallery() async {
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -188,6 +271,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       _showErrorSnackBar('Failed to pick image: ${e.toString()}');
     }
   }
+
   Future<void> _takePhotoWithCamera() async {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
@@ -201,6 +285,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       _showErrorSnackBar('Failed to take photo: ${e.toString()}');
     }
   }
+
   void _filterRecipients(String query) {
     final List<Map<String, dynamic>> sourceList =
         _recipientType == 'student' ? _allStudents : _allSections;
@@ -212,6 +297,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       }).toList();
     });
   }
+
   void _addRecipient(Map<String, dynamic> recipient) {
     if (!_selectedRecipients.any(
         (r) => r['id'] == recipient['id'] && r['type'] == recipient['type'])) {
@@ -222,12 +308,14 @@ class _NotificationScreenState extends State<NotificationScreen>
       });
     }
   }
+
   void _removeRecipient(Map<String, dynamic> recipient) {
     setState(() {
       _selectedRecipients.removeWhere(
           (r) => r['id'] == recipient['id'] && r['type'] == recipient['type']);
     });
   }
+
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -255,8 +343,8 @@ class _NotificationScreenState extends State<NotificationScreen>
         title: Text(
           "Confirm Notification",
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -320,10 +408,10 @@ class _NotificationScreenState extends State<NotificationScreen>
 
 // Helper method to create consistent confirmation rows
   Widget _buildConfirmationRow(
-      BuildContext context, {
-        required String label,
-        required String value,
-      }) {
+    BuildContext context, {
+    required String label,
+    required String value,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
@@ -338,9 +426,9 @@ class _NotificationScreenState extends State<NotificationScreen>
             child: Text(
               "$label:",
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ),
           Expanded(
@@ -355,29 +443,30 @@ class _NotificationScreenState extends State<NotificationScreen>
       ),
     );
   }
+
   Future<void> _sendNotification() async {
     // Validation (keep existing validation)
-  if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
-        CustomAlert.error(
-            context, 'Validation Error', 'Title and description are required');
-        return;
-      }
+    if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
+      CustomAlert.error(
+          context, 'Validation Error', 'Title and description are required');
+      return;
+    }
 
-      if (!_isBroadcast && _selectedRecipients.isEmpty) {
-        CustomAlert.error(
-            context, 'Validation Error', 'Please select at least one recipient');
-        return;
-      }
+    if (!_isBroadcast && _selectedRecipients.isEmpty) {
+      CustomAlert.error(
+          context, 'Validation Error', 'Please select at least one recipient');
+      return;
+    }
 
-      final instructorProvider =
-      Provider.of<InstructorProvider>(context, listen: false);
-      final teacherId = instructorProvider.instructor?.userId;
-      if (teacherId == null) {
-        CustomAlert.error(context, 'Error', 'Teacher ID not found');
-        return;
-      }
+    final instructorProvider =
+        Provider.of<InstructorProvider>(context, listen: false);
+    final teacherId = instructorProvider.instructor?.userId;
+    if (teacherId == null) {
+      CustomAlert.error(context, 'Error', 'Teacher ID not found');
+      return;
+    }
     try {
-        CustomAlert.loading(context, 'Sending Message ! ', 'Please Wait ..... ');
+      CustomAlert.loading(context, 'Sending Message ! ', 'Please Wait ..... ');
       // Prepare request data
       final Map<String, dynamic> requestData = {
         'sender': 'Teacher',
@@ -385,13 +474,14 @@ class _NotificationScreenState extends State<NotificationScreen>
         'title': _titleController.text,
         'description': _descriptionController.text
       };
-      if(_isBroadcast){
-        requestData['broadcast']='true';
+      if (_isBroadcast) {
+        requestData['broadcast'] = 'true';
       }
       // Media handling
       if (_selectedMediaType == 'image' && _imageFile != null) {
         requestData['image'] = _imageFile!;
-      } else if (_selectedMediaType == 'link' && _mediaLinkController.text.isNotEmpty) {
+      } else if (_selectedMediaType == 'link' &&
+          _mediaLinkController.text.isNotEmpty) {
         requestData['image'] = _mediaLinkController.text;
       }
 
@@ -416,9 +506,9 @@ class _NotificationScreenState extends State<NotificationScreen>
           try {
             final response = await _sendNotificationRequest(recipientData);
             if (!response['success']) {
-
               allSuccess = false;
-              errorMessages += '❌ ${recipient['display']}: ${response['message']}\n';
+              errorMessages +=
+                  '❌ ${recipient['display']}: ${response['message']}\n';
             }
           } catch (e) {
             allSuccess = false;
@@ -442,9 +532,8 @@ class _NotificationScreenState extends State<NotificationScreen>
 
       // Clear form
       _clearForm();
-
     } catch (e) {
-        Navigator.pop(context);
+      Navigator.pop(context);
       CustomAlert.error(
         context,
         'Error',
@@ -452,6 +541,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       );
     }
   }
+
   void _clearForm() {
     setState(() {
       _titleController.clear();
@@ -463,6 +553,7 @@ class _NotificationScreenState extends State<NotificationScreen>
     });
     _fetchNotifications();
   }
+
   Future<Map<String, dynamic>> _sendNotificationRequest(
       Map<String, dynamic> data) async {
     try {
@@ -480,14 +571,14 @@ class _NotificationScreenState extends State<NotificationScreen>
         'sender': data['sender'],
         'sender_id': data['sender_id']
       });
-      if (data.containsKey('broadcast')){
-        request.fields['Broadcast']=data['broadcast'];
+      if (data.containsKey('broadcast')) {
+        request.fields['Broadcast'] = data['broadcast'];
       }
       if (data.containsKey('Student_id')) {
         request.fields['Student_id'] = data['Student_id'].toString();
       }
-      if(data.containsKey('Student_Section')){
-        request.fields['Student_Section']=data['Student_Section'].toString();
+      if (data.containsKey('Student_Section')) {
+        request.fields['Student_Section'] = data['Student_Section'].toString();
       }
       if (data['image'] is File) {
         request.files.add(await http.MultipartFile.fromPath(
@@ -516,6 +607,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       };
     }
   }
+
   void _handleResponse(Map<String, dynamic> response) {
     if (response['success'] == true) {
       CustomAlert.success(
@@ -535,6 +627,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       );
     }
   }
+
   String _formatDate(String dateString) {
     try {
       final DateTime date = DateTime.parse(dateString);
@@ -543,6 +636,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       return dateString;
     }
   }
+
   Future<void> _launchUrl(String url) async {
     if (url.isEmpty) return;
     try {
@@ -556,53 +650,144 @@ class _NotificationScreenState extends State<NotificationScreen>
       _showErrorSnackBar('Error launching URL: ${e.toString()}');
     }
   }
+
   void _showImageFullscreen(String imageUrl) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          insetPadding: const EdgeInsets.all(10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(0),
+          child: Stack(
             children: [
-              AppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                title: const Text('Image Preview'),
-                leading: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.9),
                 ),
               ),
-              Flexible(
-                child: InteractiveViewer(
-                  minScale: 0.1,
-                  maxScale: 3.0,
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      icon: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          shape: BoxShape.circle,
                         ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Center(
-                        child: Text('Error loading image',
-                            style: TextStyle(color: Colors.red)),
-                      );
-                    },
+                        padding: const EdgeInsets.all(6),
+                        child: const Icon(Icons.close,
+                            color: Colors.white, size: 28),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
-                ),
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: InteractiveViewer(
+                          panEnabled: true,
+                          minScale: 0.1,
+                          maxScale: 5.0,
+                          child: Hero(
+                            tag: imageUrl,
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.contain,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: progress.expectedTotalBytes != null
+                                        ? progress.cumulativeBytesLoaded /
+                                            progress.expectedTotalBytes!
+                                        : null,
+                                    color: theme.primaryColor,
+                                    strokeWidth: 2,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[900],
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.error_outline,
+                                            size: 40,
+                                            color: theme.colorScheme.error),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'Failed to load image',
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            color: theme.colorScheme.error,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SafeArea(
+                    minimum: const EdgeInsets.all(20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildActionButton(
+                          icon: Icons.download_rounded,
+                          label: 'Save',
+                          onPressed:() async {
+                            await _saveToCustomFolder(imageUrl);
+                          },
+                        ),
+                        const SizedBox(width: 20),
+                        _buildActionButton(
+                          icon: Icons.share_rounded,
+                          label: 'Share',
+                          onPressed: () async {
+                            try {
+                              final tempDir = await getTemporaryDirectory();
+                              final timestamp =
+                                  DateTime.now().millisecondsSinceEpoch;
+                              final file =
+                                  File('${tempDir.path}/image_$timestamp.jpg');
+
+                              await Dio().download(imageUrl, file.path);
+
+                              await Share.shareXFiles(
+                                [XFile(file.path, mimeType: 'image/jpeg')],
+                                text: 'Shared image from LMS',
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Share failed: ${e.toString()}',
+                                      style: TextStyle(color: Colors.white)),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -610,6 +795,9 @@ class _NotificationScreenState extends State<NotificationScreen>
       },
     );
   }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -645,6 +833,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       ),
     );
   }
+
   Widget _buildNotificationsTab() {
     return Padding(
       padding: const EdgeInsets.all(12),
@@ -674,140 +863,239 @@ class _NotificationScreenState extends State<NotificationScreen>
     return Card(
       elevation: 0,
       color: cardColor,
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: primaryColor.withOpacity(0.2),
+          color: primaryColor.withOpacity(0.1),
           width: 1,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header with avatar and sender info
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: primaryColor.withOpacity(0.2),
-                  backgroundImage: notification.senderImage != null
-                      ? NetworkImage(notification.senderImage!)
-                      : null,
-                  child: notification.senderImage == null
-                      ? Text(
-                          notification.senderName.isNotEmpty
-                              ? notification.senderName[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    notification.senderName,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: textColor,
+                // Avatar with fallback
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: primaryColor.withOpacity(0.1),
+                    border: Border.all(
+                      color: primaryColor.withOpacity(0.2),
+                      width: 1,
                     ),
                   ),
+                  child: notification.senderImage != null
+                      ? ClipOval(
+                          child: Image.network(
+                            notification.senderImage!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _buildAvatarFallback(notification),
+                          ),
+                        )
+                      : _buildAvatarFallback(notification),
                 ),
-                Text(
-                  _formatDate(notification.notificationDate),
-                  style: TextStyle(
-                    color: secondaryTextColor,
-                    fontSize: 12,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notification.senderName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: textColor,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            _formatDate(notification.notificationDate),
+                            style: TextStyle(
+                              color: secondaryTextColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        notification.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: textColor.withOpacity(0.8),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              notification.title,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: textColor,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 12),
+
+            // Notification message
             Text(
               notification.description,
               style: TextStyle(
-                color: textColor.withOpacity(0.9),
-                fontSize: 13,
+                color: textColor,
+                fontSize: 14,
+                height: 1.4,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-            if (notification.media.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _buildMediaPreview(notification),
-            ],
+            const SizedBox(height: 12),
+
+            // Media preview (if exists)
+            if (notification.media.isNotEmpty) _buildMediaPreview(notification),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildAvatarFallback(NotificationModel notification) {
+    return Center(
+      child: Text(
+        notification.senderName.isNotEmpty
+            ? notification.senderName[0].toUpperCase()
+            : '?',
+        style: TextStyle(
+          color: primaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      ),
+    );
+  }
+
   Widget _buildMediaPreview(NotificationModel notification) {
+    final double imageAspectRatio = 16 / 9; // Standard widescreen aspect ratio
+
     if (notification.mediaType == 'image') {
       return GestureDetector(
         onTap: () => _showImageFullscreen(notification.media),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            height: 120,
-            decoration: BoxDecoration(
-              border: Border.all(color: primaryColor.withOpacity(0.2)),
-            ),
-            child: Image.network(
-              notification.media,
-              fit: BoxFit.cover,
-              loadingBuilder: (_, child, progress) {
-                return progress == null
-                    ? child
-                    : Center(
-                        child: CircularProgressIndicator(
-                        value: progress.expectedTotalBytes != null
-                            ? progress.cumulativeBytesLoaded /
-                                progress.expectedTotalBytes!
-                            : null,
-                      ));
-              },
-              errorBuilder: (_, __, ___) => Center(
-                child: Icon(Icons.broken_image, color: secondaryTextColor),
+        child: Container(
+          width: double.infinity, // Takes full width of card
+          constraints: BoxConstraints(
+            maxHeight: 200, // Maximum height for images
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.grey[100],
+          ),
+          child: AspectRatio(
+            aspectRatio: imageAspectRatio,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                notification.media,
+                fit: BoxFit.cover,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: progress.expectedTotalBytes != null
+                          ? progress.cumulativeBytesLoaded /
+                              progress.expectedTotalBytes!
+                          : null,
+                      color: primaryColor,
+                      strokeWidth: 2,
+                    ),
+                  );
+                },
+                errorBuilder: (_, __, ___) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image,
+                          size: 32, color: secondaryTextColor),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Could not load image',
+                        style: TextStyle(
+                          color: secondaryTextColor,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
         ),
       );
     } else {
+      // For non-image media (links)
       return InkWell(
         onTap: () => _launchUrl(notification.media),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.all(8),
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: primaryColor.withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: primaryColor.withOpacity(0.2)),
+            border: Border.all(
+              color: primaryColor.withOpacity(0.1),
+              width: 1,
+            ),
           ),
           child: Row(
             children: [
-              Icon(Icons.link, size: 18, color: primaryColor),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  notification.media,
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontSize: 12,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
+                child: Icon(
+                  Icons.link,
+                  size: 16,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Attachment Link',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: primaryColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      notification.media,
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.7),
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: primaryColor.withOpacity(0.5),
+                size: 20,
               ),
             ],
           ),
@@ -815,6 +1103,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       );
     }
   }
+
   Widget _buildSendNotificationTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1262,7 +1551,8 @@ class _NotificationScreenState extends State<NotificationScreen>
         const SizedBox(height: 10),
         _buildFancyTextField(
           controller: _recipientSearchController,
-          label: "Search ${_recipientType == 'student' ? 'students' : 'sections'}",
+          label:
+              "Search ${_recipientType == 'student' ? 'students' : 'sections'}",
           icon: Icons.search,
           onChanged: _filterRecipients,
         ),
@@ -1357,7 +1647,8 @@ class _NotificationScreenState extends State<NotificationScreen>
             return;
           }
           if (!_isBroadcast && _selectedRecipients.isEmpty) {
-            CustomAlert.warning(context, 'Please select at least one recipient');
+            CustomAlert.warning(
+                context, 'Please select at least one recipient');
             return;
           }
           _showConfirmationDialog();

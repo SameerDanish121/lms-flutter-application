@@ -84,7 +84,7 @@ class NotificationModel {
 }
 List<Model> navBtn = [
   Model(id: 0, imagePath: 'assets/home.png', name: 'Home'),
-  Model(id: 1, imagePath: 'assets/course_content.png', name: 'Course Content'),
+  Model(id: 1, imagePath: 'assets/course_content.png', name: 'Lesson Plan'),
   Model(id: 2, imagePath: 'assets/more.png', name: 'Task'),
   Model(id: 3, imagePath: 'assets/bell.png', name: 'Notification'),
   Model(id: 4, imagePath: 'assets/user.png', name: 'Profile'),

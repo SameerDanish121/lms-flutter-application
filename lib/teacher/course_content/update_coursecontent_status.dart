@@ -21,13 +21,12 @@ class SectionDetailsScreen extends StatefulWidget {
 }
 
 class _SectionDetailsScreenState extends State<SectionDetailsScreen> {
-
   Map<String, dynamic>? courseContent;
   bool isLoading = true;
   String? selectedWeek = 'All';
   String? errorMessage;
-  int currentWeek=0;
-  int totalWeek=0;
+  int currentWeek = 0;
+  int totalWeek = 0;
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
   GlobalKey<RefreshIndicatorState>();
 
@@ -37,20 +36,15 @@ class _SectionDetailsScreenState extends State<SectionDetailsScreen> {
     _fetchSectionContent();
     final instructor =
         Provider.of<InstructorProvider>(context, listen: false).instructor;
-    final int?  cWeek=instructor?.week;
-    if(cWeek==0){
-      currentWeek=0;
-
-    }else{
-      currentWeek=cWeek!;
-      selectedWeek=cWeek.toString();
-    }
+    currentWeek = instructor?.week ?? 0;
+    selectedWeek = currentWeek > 0 ? currentWeek.toString() : 'All';
   }
 
   Future<void> _fetchSectionContent() async {
     setState(() {
       isLoading = true;
       errorMessage = null;
+      selectedWeek = 'All';
     });
 
     try {
@@ -76,15 +70,22 @@ class _SectionDetailsScreenState extends State<SectionDetailsScreen> {
           if (data['Course_Content'] is Map) {
             setState(() {
               courseContent = Map<String, dynamic>.from(data['Course_Content']);
-              totalWeek=courseContent!.length;
+              totalWeek = courseContent!.length;
+              // Reset selected week to current week if it exists in the new data
+              if (currentWeek > 0 && courseContent!.containsKey(currentWeek.toString())) {
+                selectedWeek = currentWeek.toString();
+              }
             });
           } else if (data['Course_Content'] is String) {
-            // Handle case where Course_Content might be a string
             try {
               final parsedContent = json.decode(data['Course_Content']);
               if (parsedContent is Map) {
                 setState(() {
                   courseContent = Map<String, dynamic>.from(parsedContent);
+                  totalWeek = courseContent!.length;
+                  if (currentWeek > 0 && courseContent!.containsKey(currentWeek.toString())) {
+                    selectedWeek = currentWeek.toString();
+                  }
                 });
               } else {
                 throw Exception('Invalid Course_Content format');
@@ -98,6 +99,7 @@ class _SectionDetailsScreenState extends State<SectionDetailsScreen> {
         } else {
           setState(() {
             courseContent = {};
+            totalWeek = 0;
           });
         }
       } else {
@@ -107,6 +109,7 @@ class _SectionDetailsScreenState extends State<SectionDetailsScreen> {
     } catch (e) {
       setState(() {
         errorMessage = _getErrorMessage(e);
+        selectedWeek = 'All';
       });
       debugPrint('Error fetching section content: $e');
     } finally {
@@ -133,7 +136,7 @@ class _SectionDetailsScreenState extends State<SectionDetailsScreen> {
 
       final response = await http
           .post(
-        Uri.parse('${ApiConfig.apiBaseUrl}api/Teachers/update-course-content'),
+        Uri.parse('${ApiConfig.apiBaseUrl}Teachers/update-course-content'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           "coursecontent_id": courseContentId,
@@ -183,16 +186,34 @@ class _SectionDetailsScreenState extends State<SectionDetailsScreen> {
     if (courseContent == null || courseContent!.isEmpty) return items;
 
     try {
-      courseContent!.keys.whereType<String>().forEach((week) {
+      // Convert keys to integers, sort them, then convert back to strings
+      final weekNumbers = courseContent!.keys
+          .whereType<String>()
+          .map((week) => int.tryParse(week) ?? 0)
+          .where((week) => week > 0)
+          .toList()
+        ..sort();
+
+      for (var week in weekNumbers) {
         items.add(
           DropdownMenuItem<String>(
-            value: week,
+            value: week.toString(),
             child: Text('Week $week', style: AppTheme.bodyStyle),
           ),
         );
-      });
+      }
     } catch (e) {
       debugPrint('Error generating week dropdown: $e');
+    }
+
+    // Ensure current week exists in dropdown if we have data
+    if (currentWeek > 0 && !items.any((item) => item.value == currentWeek.toString())) {
+      items.add(
+        DropdownMenuItem<String>(
+          value: currentWeek.toString(),
+          child: Text('Week $currentWeek', style: AppTheme.bodyStyle),
+        ),
+      );
     }
 
     return items;
@@ -621,12 +642,16 @@ class _SectionDetailsScreenState extends State<SectionDetailsScreen> {
 
           // Week Dropdown
           DropdownButtonFormField<String>(
-            value: selectedWeek,
+            value: _getWeekDropdownItems().any((item) => item.value == selectedWeek)
+                ? selectedWeek
+                : 'All',
             items: _getWeekDropdownItems(),
             onChanged: (value) {
-              setState(() {
-                selectedWeek = value;
-              });
+              if (value != null) {
+                setState(() {
+                  selectedWeek = value;
+                });
+              }
             },
             decoration: InputDecoration(
               labelText: 'Select Week',

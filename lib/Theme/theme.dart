@@ -9,7 +9,10 @@ class AppTheme {
   static const Color secondaryTextColor = Color(0xFF546E7A); // Medium blue-grey text
   static const Color iconColor = Color(0xFF1565C0); // Primary color for icons
   static const Color dividerColor = Color(0xFFB0BEC5); // Light divider color
-
+  // #4E6AEB MAIN HEADER ,
+  //#F0F3FF BACK
+  //BUTTONS #3C51B4
+  //tEXT #303133
   // Text Styles
   static const TextStyle headingStyle = TextStyle(
     fontSize: 20,

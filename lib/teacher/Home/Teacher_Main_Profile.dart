@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SizedBox(height: 20),
             TextFormField(
               controller: emailController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'New Email',
                 border: OutlineInputBorder(),
               ),
@@ -391,38 +391,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         GestureDetector(
                           onTap: _updateProfileImage,
                           child: CircleAvatar(
-                            radius: 60,
+                            radius: 60,  // Increased from 30 to 60
                             backgroundColor: Colors.white, // White border
                             child: CircleAvatar(
-                              radius: 58, // Slightly smaller than parent
-                              backgroundColor:
-                                  Colors.grey[200], // optional background
+                              radius: 58,  // Increased from 28 to 58 (maintaining 2px border)
+                              backgroundColor: Colors.grey[200], // optional background
                               child: ClipOval(
-                                child: Image.network(
-                                  imageUrl,
-                                  width: 116, // double of inner radius (58 * 2)
+                                child: SizedBox(
+                                  width: 116,  // 58 * 2 (double the inner radius)
                                   height: 116,
-                                  fit: BoxFit
-                                      .cover, // Changed to cover for better image display
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return CircularProgressIndicator(
-                                      value:
-                                          loadingProgress.expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  loadingProgress
-                                                      .expectedTotalBytes!
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.contain,  // Maintains full image visibility
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value: loadingProgress.expectedTotalBytes != null
+                                              ? loadingProgress.cumulativeBytesLoaded /
+                                              loadingProgress.expectedTotalBytes!
                                               : null,
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Icon(
-                                    Icons.person,
-                                    size: 58,
-                                    color: Colors.grey[600],
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) => Center(
+                                      child: Icon(
+                                        Icons.person,
+                                        size: 58,  // Matches inner radius
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
