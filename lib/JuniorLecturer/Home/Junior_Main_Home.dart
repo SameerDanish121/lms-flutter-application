@@ -1,18 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lmsv2/file_view/offilne_view.dart';
-import 'package:lmsv2/teacher/Home/today_classes.dart';
-import 'package:lmsv2/teacher/MarkAttendance/contest_attendance.dart';
-import 'package:lmsv2/teacher/grader/teacher_grader.dart';
-import 'package:lmsv2/teacher/timetable_teacher.dart';
 import 'package:provider/provider.dart';
 import '../../provider/instructor_provider.dart';
-import '../course/teacher_course.dart';
-import '../task/task_info.dart';
+import '../MarkAttendance/contest_attendance.dart';
+import '../course/junior_course.dart';
+import '../task/junior_task_info.dart';
+import '../timetable_junior.dart';
+import 'junior_today_classes.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class JuniorHomeScreen extends StatelessWidget {
+  const JuniorHomeScreen({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     // Get current date and time
@@ -54,7 +52,7 @@ class HomeScreen extends StatelessWidget {
                             child: Text(
                               'Instructor data not available',
                               style:
-                                  TextStyle(color: Colors.grey, fontSize: 12),
+                              TextStyle(color: Colors.grey, fontSize: 12),
                             ),
                           ),
                         );
@@ -109,11 +107,6 @@ class HomeScreen extends StatelessWidget {
                     color: Colors.blue,
                   ),
                   CardData(
-                    title: 'Graders',
-                    icon: Icons.assessment,
-                    color: Colors.green,
-                  ),
-                  CardData(
                     title: 'Attendance',
                     icon: Icons.date_range,
                     color: Colors.amber,
@@ -126,17 +119,17 @@ class HomeScreen extends StatelessWidget {
                 title: 'Manage and Track',
                 cards: [
                   CardData(
-                    title: 'Attendance',
-                    icon: Icons.assignment,
-                    color: Colors.purple,
-                  ),
-                  CardData(
                     title: 'Contest',
                     icon: Icons.school,
                     color: Colors.red,
                   ),
                   CardData(
-                    title: 'Task',
+                    title: 'Attendance',
+                    icon: Icons.assignment,
+                    color: Colors.purple,
+                  ),
+                  CardData(
+                    title: 'Mark Task',
                     icon: Icons.folder,
                     color: Colors.teal,
                   ),
@@ -158,7 +151,7 @@ class HomeScreen extends StatelessWidget {
     required BuildContext context,
   }) {
     final instructorProvider =
-        Provider.of<InstructorProvider>(context, listen: false);
+    Provider.of<InstructorProvider>(context, listen: false);
     final teacherId = instructorProvider.instructor?.id;
 
     return Padding(
@@ -188,34 +181,29 @@ class HomeScreen extends StatelessWidget {
                   onTap: () {
                     if (title == 'Manage and Track' &&
                         cards[index].title == 'Attendance') {
-                      ClassPrompt.showTodayClasses(context, teacherId!);
+                      ClassPrompts.showTodayClasses(context, teacherId!);
                     } else if (title == 'Manage and Track' &&
                         cards[index].title == 'Contest') {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => ContestAttendanceScreen()),
+                            builder: (context) =>JuniorContestAttendanceScreen()),
                       );
 
-                    }else if(cards[index].title=='Graders'){
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => GraderInfoScreen()),
-                      );
                     }else if(cards[index].title=='Courses'){
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => TeacherCoursesScreen()),
+                            builder: (context) => JuniorCoursesScreen()),
                       );
-                    }else if(cards[index].title=='Mark Task'){
-
+                    }
+                    else if(cards[index].title=='Mark Task'){
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) =>TaskDetailsScreen(teacherId: teacherId!,)),
+                            builder: (context) =>JuniorTaskDetailsScreen(teacherId: teacherId!,)),
                       );
+
                     }
                   },
                   borderRadius: BorderRadius.circular(16),
@@ -324,7 +312,7 @@ Widget _buildTimetableHeader(BuildContext context, String date, String day) {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => TimetableScreen()),
+                  MaterialPageRoute(builder: (context) => JuniorTimetableScreen()),
                 );
               },
               style: TextButton.styleFrom(
@@ -476,7 +464,7 @@ Widget _buildTimetableList(List<dynamic> timetable, TimeOfDay currentTime) {
                   ),
                 ),
                 padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 child: Row(
                   children: [
                     Expanded(
@@ -544,7 +532,6 @@ String _formatTimeDisplay(String startTime, String endTime) {
   final end = endTime.split(':').take(2).join(':');
   return '$start - $end';
 }
-
 bool _isCurrentTimeSlot(String startTime, String endTime) {
   try {
     final now = DateTime.now();

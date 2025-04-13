@@ -61,6 +61,7 @@ dependencies:
   file_picker: ^8.3.2
   video_player: ^2.9.5
   fluttertoast: ^8.2.12
+  awesome_bottom_bar: ^1.2.4
 dev_dependencies:
   flutter_test:
     sdk: flutter

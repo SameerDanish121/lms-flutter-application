@@ -70,6 +70,7 @@ class SplashServices{
             case 'Student':
               Navigator.pushReplacement(
                 context,
+
                 MaterialPageRoute(builder: (context) => StudentHome(studentData: data['StudentInfo'])),
               );
               return; // Exit early, we've navigated to the right screen

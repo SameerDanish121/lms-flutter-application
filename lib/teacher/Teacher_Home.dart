@@ -10,7 +10,6 @@ import 'package:lmsv2/Theme/Colors.dart';
 import 'Home/Teacher_Main_Home.dart';
 import 'Home/Teacher_Main_Notification.dart';
 import 'Home/Teacher_Main_Profile.dart';
-import 'Home/Teacher_Main_Settings.dart';
 import 'Home/Teacher_Main_Task.dart';
 class TeacherHome extends StatefulWidget {
   const TeacherHome({Key? key}) : super(key: key);

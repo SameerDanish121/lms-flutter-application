@@ -99,7 +99,7 @@ class _LoginState extends State<Login> {
       type: QuickAlertType.custom,
       barrierDismissible: false,
       confirmBtnText: 'Verify',
-      customAsset: 'assets/two_factor.png', // Use an appropriate verification animation
+      customAsset: 'assets/developer.jpg', // Use an appropriate verification animation
       title: 'Two-Step Verification',
       text: 'Enter the verification code ',
       widget: SingleChildScrollView(
@@ -196,10 +196,7 @@ class _LoginState extends State<Login> {
 
           // Close loading dialog
           Navigator.pop(context);
-
-          // Handle verification result
-          bool JaaBhaiKrLyLoginBegairOtpKy=true;
-          if (response['status'] == 'success' || JaaBhaiKrLyLoginBegairOtpKy) {
+          if ( response['status'] == 'success') {
             // Cancel the timer
             countdownTimer?.cancel();
 
@@ -329,11 +326,29 @@ class _LoginState extends State<Login> {
             );
             break;
           case 'Teacher':
-            handleRoleNavigation(context, 'Teacher', {'TeacherInfo': data['TeacherInfo']});
+            // handleRoleNavigation(context, 'Teacher', {'TeacherInfo': data['TeacherInfo']});
+            // ApiServices.storeFcmTokens(userId);
 
+            // Store the data in InstructorProvider
+            Provider.of<InstructorProvider>(context, listen: false)
+                .setInstructor("Teacher", data['TeacherInfo']);
+
+            // Navigate without passing params
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const TeacherHome()),
+                  (route) => false,
+            );
             break;
           case 'JuniorLecturer':
-            handleRoleNavigation(context, 'JuniorLecturer', {'TeacherInfo': data['TeacherInfo']});
+            // handleRoleNavigation(context, 'JuniorLecturer', {'TeacherInfo': data['TeacherInfo']});
+            Provider.of<InstructorProvider>(context, listen: false)
+                .setInstructor("Junior Lecturer", data['TeacherInfo']);
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const JuniorHome()),
+                  (route) => false,
+            );
             break;
           default:
             CustomAlert.error(context,'Login Failed','Please Enter Valid Username and Password !');

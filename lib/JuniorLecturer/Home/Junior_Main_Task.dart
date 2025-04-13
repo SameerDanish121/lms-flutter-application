@@ -8,17 +8,16 @@ import 'dart:convert';
 import '../../provider/instructor_provider.dart';
 import '../../Theme/theme.dart';
 import '../../alerts/custom_alerts.dart';
-import '../course_content/add_course_content.dart';
-import '../task/task_info.dart';
-
-class TaskScreen extends StatefulWidget {
-  const TaskScreen({Key? key}) : super(key: key);
+import '../task/add_coursecontent_task.dart';
+import '../task/junior_task_info.dart';
+class JuniorTaskScreen extends StatefulWidget {
+  const JuniorTaskScreen({Key? key}) : super(key: key);
 
   @override
-  State<TaskScreen> createState() => _TaskScreenState();
+  State<JuniorTaskScreen> createState() => _JuniorTaskScreenState();
 }
 
-class _TaskScreenState extends State<TaskScreen> {
+class _JuniorTaskScreenState extends State<JuniorTaskScreen> {
   late String? teacherId;
   Map<String, dynamic>? tasksData;
   bool isLoading = true;
@@ -46,7 +45,7 @@ class _TaskScreenState extends State<TaskScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.apiBaseUrl}Teachers/task/un-assigned?teacher_id=${int.parse(teacherId ?? '0')}'),
+        Uri.parse('${ApiConfig.apiBaseUrl}JuniorLec/task/un-assigned?teacher_id=${int.parse(teacherId ?? '0')}'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(Duration(seconds: 30));
 
@@ -811,7 +810,7 @@ class _TaskScreenState extends State<TaskScreen> {
     for (final sectionId in sectionIds) {
       try {
         final response = await http.post(
-          Uri.parse('${ApiConfig.apiBaseUrl}Teachers/create/task'),
+          Uri.parse('${ApiConfig.apiBaseUrl}JuniorLec/create/task'),
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -1010,7 +1009,7 @@ class _TaskScreenState extends State<TaskScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CreateCourseContentScreen(
+                        builder: (context) => JuniorCreateCourseContentScreen(
                             teacherId: teacherId.toString()
                         ),
                       ),
@@ -1023,7 +1022,7 @@ class _TaskScreenState extends State<TaskScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>  TaskDetailsScreen(
+                        builder: (context) =>  JuniorTaskDetailsScreen(
                             teacherId: id
                         ),
                       ),
