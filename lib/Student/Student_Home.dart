@@ -1,280 +1,207 @@
 import 'package:flutter/material.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
+import 'package:lmsv2/Student/Profile.dart';
+import 'package:lmsv2/Student/student_notification.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../provider/student_provider.dart';
+import 'Attendance/Overall_Attendance.dart';
+import 'Dashboard/Student_Main_AcedamciReport.dart';
+import 'Dashboard/Student_Main_CourseContent.dart';
+import 'Dashboard/Student_Main_DueTaskTab.dart';
+import 'Dashboard/Student_Main_Home.dart';
+import 'Dashboard/Stundet_Main_Timetable.dart';
 
-class StudentHome extends StatelessWidget {
-  final Map<String, dynamic> studentData;
+class DashboardTheme {
+  // Color Palette
+  static const Color primaryColor = Color(0xFF4B39EF);
+  static const Color secondaryColor = Color(0xFFEE8B60);
+  static const Color tertiaryColor = Color(0xFFFFE8DF);
+  static const Color alternateColor = Color(0xFFF1F4F8);
+  static const Color primaryTextColor = Color(0xFF101213);
+  static const Color secondaryTextColor = Color(0xFF57636C);
+  static const Color primaryBackgroundColor = Color(0xFFF1F4F8);
+  static const Color secondaryBackgroundColor = Color(0xFFFFFFFF);
 
-  const StudentHome({Key? key, required this.studentData}) : super(key: key);
+  // Text Styles
+  static const TextStyle titleLarge = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w600,
+    color: primaryTextColor,
+  );
+
+  static const TextStyle titleMedium = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w500,
+    color: primaryTextColor,
+  );
+
+  static const TextStyle bodyLarge = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    color: primaryTextColor,
+  );
+
+  static const TextStyle bodyMedium = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.normal,
+    color: secondaryTextColor,
+  );
+
+  // Card Styles
+  static BoxDecoration noticeBoardDecoration = BoxDecoration(
+    color: secondaryBackgroundColor,
+    borderRadius: BorderRadius.circular(12),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.1),
+        blurRadius: 6,
+        offset: const Offset(0, 2),
+      )
+    ],
+  );
+
+  static BoxDecoration courseCardDecoration = BoxDecoration(
+    color: secondaryBackgroundColor,
+    borderRadius: BorderRadius.circular(12),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.05),
+        blurRadius: 4,
+        offset: const Offset(0, 2),
+      ),
+    ],
+  );
+
+  // Theme Data
+  static ThemeData get themeData {
+    return ThemeData(
+      primaryColor: primaryColor,
+      colorScheme: const ColorScheme.light(
+        primary: primaryColor,
+        secondary: secondaryColor,
+        surface: secondaryBackgroundColor,
+        background: primaryBackgroundColor,
+      ),
+      scaffoldBackgroundColor: primaryBackgroundColor,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: primaryBackgroundColor,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: titleLarge,
+        iconTheme: IconThemeData(color: primaryTextColor),
+      ),
+      cardTheme: CardTheme(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        color: secondaryBackgroundColor,
+      ),
+      textTheme: const TextTheme(
+        headlineSmall: titleLarge,
+        titleLarge: titleMedium,
+        bodyLarge: bodyLarge,
+        bodyMedium: bodyMedium,
+      ),
+    );
+  }
+}
+
+
+class StudentHome extends StatefulWidget {
+  const StudentHome({Key? key}) : super(key: key);
+
+  @override
+  State<StudentHome> createState() => _StudentHomeState();
+}
+
+class _StudentHomeState extends State<StudentHome> {
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    final studentInfo = studentData;
-    final isGrader = studentInfo['Is Grader ?'] ?? false;
-    final imageUrl = studentInfo['Image'];
-    final name = studentInfo['name'];
-    final regNo = studentInfo['RegNo'];
-    final program = studentInfo['Program'];
-    final section = studentInfo['Section'];
-    final cgpa = studentInfo['CGPA'];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Student Dashboard',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Stack(
-              children: [
-                Icon(Icons.notifications, size: 28),
-                Positioned(
-                  right: 0,
-                  child: Container(
-                    padding: EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints: BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '3',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
+    return Theme(
+      data: DashboardTheme.themeData,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('LMS'),
+          actions: [
+            IconButton(
+              icon: Stack(
+                children: [
+                  Icon(Icons.notifications,
+                      color: DashboardTheme.primaryTextColor),
+                  Positioned(
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: DashboardTheme.secondaryColor,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            onPressed: () {
-              // Handle notification tap
-            },
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundImage: NetworkImage(imageUrl),
-                    backgroundColor: Colors.grey.shade200,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    name,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 5),
-                  Text(
-                    regNo,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: const Text(
+                        '3',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            ListTile(
-              leading: Icon(Icons.person, color: Colors.grey.shade700),
-              title: Text('Profile'),
-              onTap: () {
-                // Handle profile tap
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.settings, color: Colors.grey.shade700),
-              title: Text('Settings'),
-              onTap: () {
-                // Handle settings tap
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.help_outline, color: Colors.grey.shade700),
-              title: Text('Help & Support'),
-              onTap: () {
-                // Handle help tap
-              },
-            ),
-            if (isGrader)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: Text(
-                    'Switch to Grader',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  onPressed: () {
-                    // Handle switch to grader
-                  },
-                ),
-              ),
-            Divider(),
-            ListTile(
-              leading: Icon(Icons.logout, color: Colors.grey.shade700),
-              title: Text('Logout'),
-              onTap: () {
-                // Handle logout
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context)=>AttendanceOverviewScreen()));
               },
             ),
           ],
         ),
-      ),
-      body: Container(
-        color: Colors.grey.shade50,
-        child: Column(
-          children: [
-            // Header with quick info
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundImage: NetworkImage(imageUrl),
-                    backgroundColor: Colors.grey.shade200,
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome, $name',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          '$program • $section',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(Icons.star, color: Colors.amber, size: 16),
-                            SizedBox(width: 4),
-                            Text(
-                              'CGPA: $cgpa',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Main content area (will be replaced with tab views)
-            Expanded(
-              child: Center(
-                child: Text(
-                  'Select a tab to view content',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
+        body: _buildCurrentTab(),
+        bottomNavigationBar: BottomBarCreative(
+          items: const [
+            TabItem(icon: Icons.home, title: 'Home'),
+            TabItem(icon: Icons.library_books, title: 'Courses'),
+            TabItem(icon: Icons.assignment, title: 'Tasks'),
+            TabItem(icon: Icons.assessment, title: 'Grades'),
+            TabItem(icon: Icons.schedule, title: 'Schedule'),
           ],
+          backgroundColor: DashboardTheme.secondaryBackgroundColor,
+          color: DashboardTheme.secondaryTextColor,
+          colorSelected: DashboardTheme.primaryColor,
+          indexSelected: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+          highlightStyle: HighlightStyle(
+            sizeLarge: true,
+            background: DashboardTheme.primaryColor.withOpacity(0.1),
+            elevation: 0,
+          ),
         ),
-      ),
-      bottomNavigationBar: BottomBarCreative(
-        items: [
-          TabItem(
-            icon: Icons.home,
-            title: 'Home',
-          ),
-          TabItem(
-            icon: Icons.library_books,
-            title: 'Lessons',
-          ),
-          TabItem(
-            icon: Icons.assignment,
-            title: 'Tasks',
-          ),
-          TabItem(
-            icon: Icons.assessment,
-            title: 'Reports',
-          ),
-          TabItem(
-            icon: Icons.schedule,
-            title: 'Schedule',
-          ),
-        ],
-        backgroundColor: Colors.white,
-        color: Colors.grey.shade600,
-        colorSelected: Theme.of(context).primaryColor,
-        indexSelected: 0,
-        onTap: (int index) {
-          // Handle tab change
-        },
-        highlightStyle: HighlightStyle(
-          sizeLarge: true,
-          background: Theme.of(context).primaryColor.withOpacity(0.2),
-          elevation: 3,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, -3),
-          ),
-        ],
       ),
     );
+  }
+
+  Widget _buildCurrentTab() {
+    switch (_currentIndex) {
+      case 0:
+        return const HomeTab();
+      case 1:
+        return CourseContentTab();
+      case 2:
+        return DueTaskTab();
+      case 3:
+        return AcademicReportTab();
+      case 4:
+        return TimetableTab();
+
+    // Add other cases for your tabs
+      default:
+        return const Center(child: Text('Coming Soon'));
+    }
   }
 }

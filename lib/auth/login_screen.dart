@@ -13,6 +13,7 @@ import '../Student/Student_Home.dart';
 import '../api/ApiConfig.dart';
 import '../dev/developer_options.dart';
 import '../provider/instructor_provider.dart';
+import '../provider/student_provider.dart';
 import '../teacher/Teacher_Home.dart';
 import 'package:provider/provider.dart';
 import 'ForgotPassword/RecoveryEmail.dart';
@@ -320,9 +321,11 @@ class _LoginState extends State<Login> {
         switch (userType) {
           case 'Student':
             ApiServices.storeFcmTokens(data['StudentInfo']['user_id']);
+            final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+            studentProvider.setStudent('student', data);
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => StudentHome(studentData: data['StudentInfo'])),
+              MaterialPageRoute(builder: (context) => StudentHome()),
             );
             break;
           case 'Teacher':

@@ -12,6 +12,7 @@ import '../JuniorLecturer/Junior_Home.dart';
 import '../Student/Student_Home.dart';
 import '../alerts/custom_alerts.dart';
 import '../provider/instructor_provider.dart';
+import '../provider/student_provider.dart';
 import '../teacher/Teacher_Home.dart';
 
 class SplashServices{
@@ -68,10 +69,11 @@ class SplashServices{
           // Navigate based on user type
           switch (userType) {
             case 'Student':
+              final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+              studentProvider.setStudent('student', data);
               Navigator.pushReplacement(
                 context,
-
-                MaterialPageRoute(builder: (context) => StudentHome(studentData: data['StudentInfo'])),
+                MaterialPageRoute(builder: (context) => StudentHome()),
               );
               return; // Exit early, we've navigated to the right screen
             case 'Teacher':

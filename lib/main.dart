@@ -2,6 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:lmsv2/firebase/notification_services.dart';
 import 'package:lmsv2/provider/instructor_provider.dart';
+import 'package:lmsv2/provider/student_provider.dart';
 import 'package:lmsv2/splashscreen/ball%20bounce/index.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => InstructorProvider()),
+        ChangeNotifierProvider(create: (_) => StudentProvider()),
         // Add other providers if needed
       ],
       child: const MyApp(),
