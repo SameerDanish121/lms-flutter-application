@@ -64,6 +64,7 @@ dependencies:
   awesome_bottom_bar: ^1.2.4
   animate_do: ^3.3.4
   percent_indicator: ^4.2.5
+  icons_plus: ^5.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

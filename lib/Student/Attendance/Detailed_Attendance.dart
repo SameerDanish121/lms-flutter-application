@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
+import 'package:lmsv2/alerts/custom_alerts.dart';
+import 'package:lmsv2/api/ApiConfig.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
@@ -57,10 +59,10 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
         hasError = false;
       });
     }
-
+    String teacher_offered_course_id=widget.courseData['teacher_offered_course_id'].toString();
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.0.106:8000/api/Students/attendancePerSubject?teacher_offered_course_id=${widget.courseData['teacher_offered_course_id'].toString()}&student_id=36'),
+        Uri.parse('${ApiConfig.apiBaseUrl}Students/attendancePerSubject?teacher_offered_course_id=${teacher_offered_course_id}&student_id=36'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
@@ -100,11 +102,46 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     );
   }
 
-  void _contestAttendance(Map<String, dynamic> record) {
-    // Implement your contest logic here
-    // After successful contest, refresh the data
-    _fetchAttendanceData();
+  void _contestAttendance(Map<String, dynamic> record) async {
+    int attendanceId = record['id'] as int;
+    String dateTimeStr = record['date_time'] as String;
+
+    // Parse the date from string
+    DateTime attendanceDateTime = DateTime.parse(dateTimeStr);
+    DateTime now = DateTime.now();
+
+    Duration difference = now.difference(attendanceDateTime);
+
+    if (difference.inHours > 24) {
+      // Show dialog if time limit exceeded
+      CustomAlert.error(context, "Contest Not Allowed","You can't contest this attendance. The 24-hour time limit has been exceeded.");
+      return;
+    }
+
+    // Proceed to contest attendance
+    try {
+      final response = await http.post(
+        Uri.parse("${ApiConfig.apiBaseUrl}Students/contest-attendance"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"attendance_id": attendanceId}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Show success dialog
+       CustomAlert.success(context, data['Course Content'] as String);
+       _fetchAttendanceData(silent: true);
+
+      } else {
+       CustomAlert.success(context, data['message'] ?? "Failed to contest attendance.");
+      }
+    } catch (e) {
+      // Show error dialog
+          CustomAlert.error(context, 'OOps', "An unexpected error occurred. Please try again later.");
+    }
   }
+
 
   String _formatDateTime(String dateTime) {
     try {

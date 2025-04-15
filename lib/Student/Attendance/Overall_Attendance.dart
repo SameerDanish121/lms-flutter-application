@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:lmsv2/api/ApiConfig.dart';
+import 'package:provider/provider.dart';
 import 'package:quickalert/quickalert.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 
+import '../../alerts/custom_alerts.dart';
+import '../../provider/student_provider.dart';
 import 'Detailed_Attendance.dart';
 
 class AttendanceOverviewScreen extends StatefulWidget {
@@ -24,7 +28,8 @@ class _AttendanceOverviewScreenState extends State<AttendanceOverviewScreen> {
   double overallPercentage = 0.0;
   String currentSession = "Spring 2025";
   int currentWeek = 7;
-
+  String shortData='';
+  bool isShort=false;
   // Color Scheme
   static const Color primaryColor = Color(0xFF4361EE);
   static const Color secondaryColor = Color(0xFF3A0CA3);
@@ -48,10 +53,13 @@ class _AttendanceOverviewScreenState extends State<AttendanceOverviewScreen> {
       isLoading = true;
       hasError = false;
     });
-
+    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+    int? StudentId=studentProvider.student?.id;
+    currentSession=studentProvider.student!.currentSession.toString();
+    currentWeek=studentProvider.student?.currentWeek as int;
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.0.106:8000/api/Students/attendance?student_id=36'),
+        Uri.parse('${ApiConfig.apiBaseUrl}Students/attendance?student_id=$StudentId'),
       );
 
       if (response.statusCode == 200) {
@@ -80,10 +88,18 @@ class _AttendanceOverviewScreenState extends State<AttendanceOverviewScreen> {
   void _calculateTotals() {
     totalClasses = 0;
     totalPresent = 0;
-
     for (var course in attendanceData) {
       totalClasses += course['Total_classes_conducted'] as int;
       totalPresent += course['total_present'] as int;
+      double per = course['Percentage'] is double
+          ? course['Percentage']
+          : double.tryParse(course['Percentage'].toString()) ?? 0;
+
+      if (per < 75) {
+        isShort = true;
+        shortData = '$shortData, ${course['course_name']} : ${per.toStringAsFixed(1)}';
+      }
+
     }
 
     overallPercentage = totalClasses > 0 ? (totalPresent / totalClasses) * 100 : 0.0;
@@ -237,7 +253,7 @@ class _AttendanceOverviewScreenState extends State<AttendanceOverviewScreen> {
           const SizedBox(height: 16),
 
           // Disclaimer for low attendance
-          if (overallPercentage < 75)
+          if (isShort)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -247,7 +263,7 @@ class _AttendanceOverviewScreenState extends State<AttendanceOverviewScreen> {
                 border: Border.all(color: warningColor.withOpacity(0.3)),
               ),
               child: Text(
-                '⚠️ Your overall attendance is below 75%. According to university policy, you may not be allowed to sit in the final exam if your attendance remains below this threshold.',
+                '⚠️ Your overall attendance is below 75% in $shortData. According to university policy, you may not be allowed to sit in the final exam if your attendance remains below this threshold.',
                 style: TextStyle(
                   color: warningColor,
                   fontSize: 14,
@@ -522,9 +538,35 @@ class _AttendanceOverviewScreenState extends State<AttendanceOverviewScreen> {
                                 ],
                               ),
                               ElevatedButton(
-                                onPressed: () {
-                                  int id=request['id'] as int;
+                                onPressed: () async {
+                                  int id = request['id'] as int;
+                                  bool? confirm = await CustomAlert.confirm(
+                                    context,
+                                    'Are you sure you want to withdraw this contested attendance request?',
+                                  );
+
+                                  if (confirm == true) {
+                                    await CustomAlert.performWithLoading(
+                                      context: context,
+                                      loadingText: 'Withdrawing request...',
+                                      task: () async {
+                                        final response = await http.delete(
+                                          Uri.parse('${ApiConfig.apiBaseUrl}Students/contested-attendance/$id/withdraw'),
+                                        );
+                                        if (response.statusCode == 200) {
+                                          // Optional: refresh list if you have a method like _fetchAttendanceData();
+                                          _fetchAttendanceData();
+                                        } else {
+                                          final data = jsonDecode(response.body);
+                                          throw Exception(data['message'] ?? 'Failed to withdraw contested request.');
+                                        }
+                                      },
+                                      successMessage: 'Contested attendance request withdrawn successfully!',
+                                      errorMessage: 'Could not withdraw the contested attendance request.',
+                                    );
+                                  }
                                 },
+
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: dangerColor,
                                   shape: RoundedRectangleBorder(
