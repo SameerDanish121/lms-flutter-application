@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:lmsv2/Student/Task/submit_file(task).dart';
+import 'package:lmsv2/Student/Task/submit_quiz.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
 import 'package:provider/provider.dart';
 import 'package:quickalert/quickalert.dart';
@@ -61,6 +63,39 @@ class _YourTasksScreenState extends State<YourTasksScreen> with SingleTickerProv
     _timer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+  Widget buildMarksLabel(double obtainedMarks) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0F7FA), // light teal background
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF00ACC1), width: 1.5), // teal border
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.grade, color: Color(0xFF00ACC1)),
+          const SizedBox(width: 8),
+          Text(
+            'You got: ${obtainedMarks.toString()} marks',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF007C91),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _fetchTaskData() async {
@@ -337,7 +372,7 @@ class _YourTasksScreenState extends State<YourTasksScreen> with SingleTickerProv
               final hasSubmission = task['Your_Submission'] != null && task['Your_Submission'] != 'N/A';
               final canAttempt = !hasSubmission && (isMcqs || task['type'] == 'Quiz' || task['type'] == 'Assignment' || task['type'] == 'LabTask');
               final isUrgent = _isUrgent(task['due_date']);
-
+              final isAttempted = isMcqs && (task.containsKey('IsAttempted') && task['IsAttempted'] == 'Yes');
               return Container(
                 margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 decoration: BoxDecoration(
@@ -452,25 +487,33 @@ class _YourTasksScreenState extends State<YourTasksScreen> with SingleTickerProv
                       ),
                       if (hasSubmission) ...[
                         const SizedBox(height: 12),
-                        _buildTaskStat('Submitted', _timeAgo(task['Submission_Date_Time']), successColor),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              _navigateToViewSubmissionScreen(context, task);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: successColor),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+
+                        if(!isMcqs)...[
+                          _buildTaskStat('Submitted', _timeAgo(task['Submission_Date_Time']), successColor),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                _navigateToViewSubmissionScreen(context, task);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: successColor),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              icon: const Icon(Icons.assignment_turned_in, size: 18),
+                              label: const Text('View Submission'),
                             ),
-                            icon: const Icon(Icons.assignment_turned_in, size: 18),
-                            label: const Text('View Submission'),
                           ),
-                        ),
+                        ],
+                        if(isMcqs)...[
+                          _buildTaskStat('Submitted',null, successColor),
+                          const SizedBox(height: 12),
+                          buildMarksLabel(task['obtained_points']?.toDouble() ?? 0),
+                        ]
                       ],
                       if (canAttempt) ...[
                         const SizedBox(height: 12),
@@ -738,7 +781,7 @@ class _YourTasksScreenState extends State<YourTasksScreen> with SingleTickerProv
               final task = completedTasks[index];
               final isMcqs = task['type'] == 'MCQS';
               final isMarked = task['IsMarked'] == 'Yes';
-              final hasSubmission = task['Your_Submission'] != null && task['Your_Submission'] != 'N/A';
+              final hasSubmission = task['Your_Submission'] != null && task['Your_Submission'] != 'N/A' ;
               final hasFile = task['File'] != null && task['File'] != 'N/A';
 
               return Container(
@@ -987,7 +1030,7 @@ class _YourTasksScreenState extends State<YourTasksScreen> with SingleTickerProv
       ],
     );
   }
-  Widget _buildTaskStat(String label, String value, Color color) {
+  Widget _buildTaskStat(String label, String? value, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -997,13 +1040,16 @@ class _YourTasksScreenState extends State<YourTasksScreen> with SingleTickerProv
             color: textSecondary,
           ),
         ),
-        Text(value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: color,
+        if(value!=null)...[
+          Text(value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
-        ),
+        ],
+
       ],
     );
   }
@@ -1133,36 +1179,4 @@ class TaskSkeletonLoader extends StatelessWidget {
   }
 }
 
-class McqsAttemptScreen extends StatelessWidget {
-  final dynamic task;
-  const McqsAttemptScreen({Key? key, required this.task}) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(task['title']),
-      ),
-      body: Center(
-        child: Text('MCQS Attempt Screen for ${task['title']}'),
-      ),
-    );
-  }
-}
-
-class FileTaskAttemptScreen extends StatelessWidget {
-  final dynamic task;
-  const FileTaskAttemptScreen({Key? key, required this.task}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(task['title']),
-      ),
-      body: Center(
-        child: Text('File Task Attempt Screen for ${task['title']}'),
-      ),
-    );
-  }
-}

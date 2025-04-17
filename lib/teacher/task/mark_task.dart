@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:icons_plus/icons_plus.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
-import 'package:url_launcher/url_launcher.dart';
-
+import '../../alerts/custom_alerts.dart';
 import '../../file_view/pdf_word_file_viewer.dart';
 
 class MarkTaskScreen extends StatefulWidget {
@@ -11,7 +12,7 @@ class MarkTaskScreen extends StatefulWidget {
   const MarkTaskScreen({Key? key, required this.task}) : super(key: key);
 
   @override
-  _MarkTaskScreenState createState() => _MarkTaskScreenState();
+  State<MarkTaskScreen> createState() => _MarkTaskScreenState();
 }
 
 class _MarkTaskScreenState extends State<MarkTaskScreen> {
@@ -22,19 +23,28 @@ class _MarkTaskScreenState extends State<MarkTaskScreen> {
   final Map<int, TextEditingController> _marksControllers = {};
   bool _isSubmitting = false;
 
-  // Color Scheme
-  final Color _primaryColor = Color(0xFF4E6AEB);
-  final Color _cardBgColor = Colors.white;
-  final Color _textColor = Color(0xFF333333);
-  final Color _secondaryTextColor = Color(0xFF666666);
-  final Color _unmarkedColor = Color(0xFF00BFA5);
-  final Color _submittedColor = Color(0xFF4CAF50);
-  final Color _notSubmittedColor = Color(0xFFF44336);
+  // Color Scheme (matching GraderTaskScreen)
+  static const Color primaryColor = Color(0xFF4361EE);
+  static const Color activeColor = Color(0xFF4CC9F0);
+  static const Color previousColor = Color(0xFF6C757D);
+  static const Color lightBackground = Color(0xFFF8F9FA);
+  static const Color textPrimary = Color(0xFF212529);
+  static const Color textSecondary = Color(0xFF6C757D);
+  static const Color successColor = Color(0xFF28A745);
+  static const Color warningColor = Color(0xFFFFC107);
+  static const Color dangerColor = Color(0xFFDC3545);
+  static const Color cardBackground = Colors.white;
 
   @override
   void initState() {
     super.initState();
     _fetchStudents();
+  }
+
+  @override
+  void dispose() {
+    _marksControllers.forEach((_, controller) => controller.dispose());
+    super.dispose();
   }
 
   Future<void> _fetchStudents() async {
@@ -55,15 +65,31 @@ class _MarkTaskScreenState extends State<MarkTaskScreen> {
 
           _marksControllers[student['Student_id']] = TextEditingController(
             text: defaultMark,
-          );
+          )..addListener(() => _validateMarks(student['Student_id']));
         }
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load students: ${e.toString()}')),
-      );
+      CustomAlert.error(context, 'Failed!', 'Failed to load students: ${e.toString()}');
+    }
+  }
+
+  void _validateMarks(int studentId) {
+    final controller = _marksControllers[studentId];
+    if (controller == null) return;
+
+    final text = controller.text;
+    if (text.isEmpty) return;
+
+    final marks = double.tryParse(text);
+    final totalMarks = widget.task['points'] ?? widget.task['Total Marks']??0;
+
+    if (marks != null && marks > totalMarks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.text = totalMarks.toString();
+        CustomAlert.warning(context, 'Marks cannot exceed $totalMarks');
+      });
     }
   }
 
@@ -72,23 +98,22 @@ class _MarkTaskScreenState extends State<MarkTaskScreen> {
   int get _noSubmissionsCount => _totalStudents - _submissionsCount;
 
   Future<bool> _onWillPop() async {
-    if (_isSubmitting) {
-      return false; // Prevent back navigation while submitting
-    }
+    if (_isSubmitting) return false;
 
     final shouldExit = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Exit Marking?'),
-        content: Text('All progress will be lost. Are you sure you want to exit?'),
+        title: Text('Exit Marking?', style: TextStyle(color: textPrimary)),
+        content: Text('All progress will be lost. Are you sure you want to exit?',
+            style: TextStyle(color: textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: primaryColor)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Exit', style: TextStyle(color: _notSubmittedColor)),
+            child: Text('Exit', style: TextStyle(color: dangerColor)),
           ),
         ],
       ),
@@ -108,314 +133,352 @@ class _MarkTaskScreenState extends State<MarkTaskScreen> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
+        backgroundColor: lightBackground,
         appBar: AppBar(
-          title: Text('Mark Task', style: TextStyle(color: Colors.white)),
-          backgroundColor: _primaryColor,
+          title: Text('Mark Task - ${widget.task['title']}'),
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
           elevation: 0,
+          centerTitle: true,
           actions: [
             IconButton(
-              icon: Icon(Icons.search, color: Colors.white),
-              onPressed: () {
-                showSearch(
-                  context: context,
-                  delegate: StudentSearchDelegate(_students),
-                );
-              },
+              icon: Icon(Bootstrap.search, color: Colors.white),
+              onPressed: () => _showSearchDialog(),
             ),
           ],
         ),
         body: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-          child: Column(
-            children: [
-              // Task Info Card
-              Container(
-                margin: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _cardBgColor,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.task['Course Name'] ?? 'No Course',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: _textColor,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        widget.task['title'] ?? 'No Title',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: _secondaryTextColor,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              widget.task['type'] ?? 'Unknown',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.blue,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _submittedColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${widget.task['points'] ?? 0} pts',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _submittedColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Stats Row
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _buildStatCard('Total', _totalStudents, _primaryColor),
-                    SizedBox(width: 8),
-                    _buildStatCard('Submitted', _submissionsCount, _submittedColor),
-                    SizedBox(width: 8),
-                    _buildStatCard('Pending', _noSubmissionsCount, _notSubmittedColor),
-                  ],
-                ),
-              ),
-              // Search Bar
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: TextField(
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                  decoration: InputDecoration(
-                    hintText: 'Search students...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              // Students List
-              ListView.builder(
-                physics: NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: filteredStudents.length,
-                itemBuilder: (context, index) {
-                  final student = filteredStudents[index];
-                  return _buildStudentCard(student);
-                },
-              ),
-              SizedBox(height: 16),
-              // Submit Button
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submitMarks,
-                  child: _isSubmitting
-                      ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(Colors.white),
-                    ),
-                  )
-                      : Text('Submit Marks'),
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white, backgroundColor: _unmarkedColor,
-                    minimumSize: Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, int count, Color color) {
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStudentCard(Map<String, dynamic> student) {
-    final hasSubmission = student['Answer'] != null;
-    final controller = _marksControllers[student['Student_id']]!;
-
-    return Container(
-      margin: EdgeInsets.fromLTRB(16, 0, 16, 12),
-      decoration: BoxDecoration(
-        color: _cardBgColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+          onRefresh: _fetchStudents,
+          color: primaryColor,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        student['name'] ?? 'No Name',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: _textColor,
+                // Task Info Card
+                Card(
+                  margin: EdgeInsets.only(bottom: 16),
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  color: cardBackground,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.task['Course Name'] ?? 'No Course',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: textPrimary,
+                          ),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        student['RegNo'] ?? 'No RegNo',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _secondaryTextColor,
+                        SizedBox(height: 8),
+                        Text(
+                          '${widget.task['Section Name'] ?? 'No Section'} • ${widget.task['type'] ?? 'No Type'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: textSecondary,
+                          ),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${widget.task['points'] ?? 0} Points',
+                                style: TextStyle(
+                                  color: primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Spacer(),
+                            Text(
+                              '${_submissionsCount}/${_totalStudents} Submitted',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                SizedBox(width: 8),
-                if (hasSubmission)
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PdfViewerScreen(fileUrl: student['Answer'],filename: student['name'],),
+
+                // Students Table
+                Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  color: cardBackground,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        // Table Header
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Colors.grey.shade200,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Text(
+                                  'Student',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Reg No',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Status',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Marks',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                    child: Text('View PDF'),
+                        SizedBox(height: 8),
+
+                        // Table Rows
+                        ...filteredStudents.map((student) => _buildStudentRow(student)).toList(),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Submit Button
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submitMarks,
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white, backgroundColor: _primaryColor,
-                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      backgroundColor: successColor,
+                      minimumSize: Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  )
-                else
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _notSubmittedColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _notSubmittedColor.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      'Not Submitted',
+                    child: _isSubmitting
+                        ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    )
+                        : Text(
+                      'Submit Marks',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: _notSubmittedColor,
-                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
+                ),
               ],
             ),
-            SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Marks (out of ${widget.task['points']})',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStudentRow(Map<String, dynamic> student) {
+    final hasSubmission = student['Answer'] != null;
+    final controller = _marksControllers[student['Student_id']]!;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey.shade100,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Student Name
+          Expanded(
+            flex: 3,
+            child: Text(
+              student['name'] ?? 'No Name',
+              style: TextStyle(
+                fontSize: 13,
+                color: textPrimary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          // Reg No
+          Expanded(
+            flex: 2,
+            child: Text(
+              student['RegNo'] ?? 'No RegNo',
+              style: TextStyle(
+                fontSize: 13,
+                color: textSecondary,
+              ),
+            ),
+          ),
+
+          // Status
+          Expanded(
+            flex: 2,
+            child: hasSubmission
+                ? InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PdfViewerScreen(
+                      fileUrl: student['Answer'],
+                      filename: student['name'],
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: successColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'View',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: successColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+                : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: dangerColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Missing',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: dangerColor,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+
+          // Marks Input
+          Expanded(
+            flex: 2,
+            child: SizedBox(
+              height: 36,
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                decoration: InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: Colors.grey.shade300,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: Colors.grey.shade300,
+                    ),
+                  ),
+                  hintText: '0',
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Search Students'),
+          content: TextField(
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Search by name or reg no...',
+              prefixIcon: Icon(Icons.search),
+            ),
+            onChanged: (value) => setState(() => _searchQuery = value),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -431,26 +494,9 @@ class _MarkTaskScreenState extends State<MarkTaskScreen> {
     }
 
     if (missingMarksStudents.isNotEmpty) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Missing Marks'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Please enter marks for all students:'),
-              SizedBox(height: 8),
-              ...missingMarksStudents.map((name) => Text('• $name')).toList(),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
-            ),
-          ],
-        ),
+      CustomAlert.warning(
+        context,
+        'Missing Marks \n Please enter marks for all students',
       );
       return;
     }
@@ -468,7 +514,7 @@ class _MarkTaskScreenState extends State<MarkTaskScreen> {
       }).toList();
 
       // Call API to submit marks
-      final response = await _dio.post(
+      await _dio.post(
         '${ApiConfig.apiBaseUrl}Grader/SubmitTaskResultList',
         data: {
           'task_id': widget.task['task_id'],
@@ -477,116 +523,20 @@ class _MarkTaskScreenState extends State<MarkTaskScreen> {
       );
 
       // Show success dialog
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          // Auto-close after 5 seconds
-          Future.delayed(Duration(seconds: 5), () {
-            Navigator.of(context).pop();
-            Navigator.of(context).pop(true); // Return to previous screen
-          });
-
-          return AlertDialog(
-            title: Text('Marks Submitted Successfully'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle, color: _submittedColor, size: 48),
-                SizedBox(height: 16),
-                Text('All marks have been successfully recorded.'),
-                SizedBox(height: 16),
-                if (response.data != null && response.data['data'] != null)
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: 200),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: (response.data['data'] as List)
-                            .map<Widget>((log) => ListTile(
-                          title: Text(log['Message'] ?? ''),
-                          subtitle: log['Error'] != null
-                              ? Text(log['Error'], style: TextStyle(color: _notSubmittedColor))
-                              : null,
-                        ))
-                            .toList(),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        },
+      CustomAlert.success(
+        context,
+        'Submitted \n Marks submitted successfully',
       );
     } catch (e) {
-      setState(() => _isSubmitting = false);
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Submission Failed'),
-          content: Text('Failed to submit marks: ${e.toString()}'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
-            ),
-          ],
-        ),
+      CustomAlert.error(
+        context,
+        'Failed!',
+        'Failed to submit marks: ${e.toString()}',
       );
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _marksControllers.forEach((_, controller) => controller.dispose());
-    super.dispose();
-  }
-}
-
-class StudentSearchDelegate extends SearchDelegate {
-  final List<dynamic> students;
-
-  StudentSearchDelegate(this.students);
-
-  @override
-  List<Widget> buildActions(BuildContext context) => [
-    IconButton(
-      icon: Icon(Icons.clear),
-      onPressed: () => query = '',
-    ),
-  ];
-
-  @override
-  Widget buildLeading(BuildContext context) => IconButton(
-    icon: Icon(Icons.arrow_back),
-    onPressed: () => close(context, null),
-  );
-
-  @override
-  Widget buildResults(BuildContext context) => _buildSearchResults();
-
-  @override
-  Widget buildSuggestions(BuildContext context) => _buildSearchResults();
-
-  Widget _buildSearchResults() {
-    final results = students.where((student) {
-      return student['name'].toString().toLowerCase().contains(query.toLowerCase()) ||
-          student['RegNo'].toString().toLowerCase().contains(query.toLowerCase());
-    }).toList();
-
-    return ListView.builder(
-      itemCount: results.length,
-      itemBuilder: (context, index) {
-        final student = results[index];
-        return ListTile(
-          title: Text(student['name'], overflow: TextOverflow.ellipsis),
-          subtitle: Text(student['RegNo']),
-          onTap: () => close(context, student),
-        );
-      },
-    );
   }
 }

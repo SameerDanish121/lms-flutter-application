@@ -27,7 +27,7 @@ class _NotificationScreenState extends State<NotificationScreen>
   final Color cardColor = const Color(0xFFE3F2FD);
   final Color textColor = const Color(0xFF263238);
   final Color secondaryTextColor = const Color(0xFF546E7A);
-  double _downloadProgress = 0.0;  // Tracks download progress (0.0 to 1.0)
+  double _downloadProgress = 0.0; // Tracks download progress (0.0 to 1.0)
   bool _isDownloading = false;
   bool _isLoading = true;
   List<NotificationModel> _notifications = [];
@@ -58,7 +58,7 @@ class _NotificationScreenState extends State<NotificationScreen>
       //     duration: Duration(seconds: 2),
       //   ),
       // );
-CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
+      CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
       // Create LMS directory if it doesn't exist
       final lmsDir = Directory('/storage/emulated/0/LMS');
       if (!await lmsDir.exists()) {
@@ -75,8 +75,7 @@ CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
         imageUrl,
         filePath,
         onReceiveProgress: (received, total) {
-          if (total != -1) {
-          }
+          if (total != -1) {}
         },
       );
       Navigator.pop(context);
@@ -84,7 +83,7 @@ CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
     } catch (e) {
       Navigator.pop(context);
 
-     CustomAlert.error(context, 'Failed to save',e.toString());
+      CustomAlert.error(context, 'Failed to save', e.toString());
     }
   }
 
@@ -103,7 +102,8 @@ CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
               side: BorderSide(color: Colors.white.withOpacity(0.2)),
-            ),),
+            ),
+          ),
           onPressed: _isDownloading ? null : onPressed,
           icon: Icon(icon, size: 20),
           label: Text(
@@ -123,6 +123,7 @@ CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
       ],
     );
   }
+
   // Image picker variables
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
@@ -751,7 +752,7 @@ CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
                         _buildActionButton(
                           icon: Icons.download_rounded,
                           label: 'Save',
-                          onPressed:() async {
+                          onPressed: () async {
                             await _saveToCustomFolder(imageUrl);
                           },
                         ),
@@ -795,8 +796,6 @@ CustomAlert.loading(context, 'Downloading', 'Please Wait .......... !');
       },
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {

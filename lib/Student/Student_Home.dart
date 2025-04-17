@@ -1,15 +1,19 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:flutter/services.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:lmsv2/Student/Grader/grader_dash.dart';
 import 'package:lmsv2/Student/Profile.dart';
 import 'package:lmsv2/Student/student_notification.dart';
+import 'package:lmsv2/Student/transcipt.dart';
+import 'package:lmsv2/alerts/custom_alerts.dart';
+import 'package:lmsv2/auth/login_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../provider/student_provider.dart';
 import 'Attendance/Overall_Attendance.dart';
+import 'Course/Course.dart';
 import 'Dashboard/Student_Main_AcedamciReport.dart';
 import 'Dashboard/Student_Main_CourseContent.dart';
 import 'Dashboard/Student_Main_DueTaskTab.dart';
@@ -23,10 +27,20 @@ class StudentHome extends StatefulWidget {
   State<StudentHome> createState() => _StudentHomeState();
 }
 
-class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStateMixin {
+class _StudentHomeState extends State<StudentHome>
+    with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late AnimationController _animationController;
+
+  // Updated color scheme
+  static const Color primaryColor = Color(0xFF4361EE);
+  static const Color secondaryColor = Color(0xFF3A0CA3);
+  static const Color accentColor = Color(0xFF4CC9F0);
+  static const Color backgroundColor = Color(0xFFF8F9FA);
+  static const Color cardColor = Colors.white;
+  static const Color textPrimary = Color(0xFF212529);
+  static const Color textSecondary = Color(0xFF6C757D);
 
   final List<Widget> _tabs = [
     const HomeTab(),
@@ -39,7 +53,6 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
   final List<TabItem> _bottomBarItems = [
     const TabItem(
       icon: Icons.home_rounded,
-
       title: 'Home',
     ),
     const TabItem(
@@ -67,7 +80,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _selectedIndex = 0; // Start with Home tab
+    _selectedIndex = 0;
   }
 
   @override
@@ -80,7 +93,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF8F9FD),
+      backgroundColor: backgroundColor,
       extendBody: true,
       appBar: _buildAppBar(),
       drawer: _buildDrawer(context),
@@ -92,7 +105,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFF3949AB),
+      backgroundColor: primaryColor,
       elevation: 0,
       scrolledUnderElevation: 0,
       shape: const RoundedRectangleBorder(
@@ -101,36 +114,19 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
           bottomRight: Radius.circular(20),
         ),
       ),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              BoxIcons.bxs_graduation,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            _getAppBarTitle(),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-          ).animate().fadeIn(duration: 200.ms).slideX(
-            begin: 0.2,
-            end: 0,
-            duration: 300.ms,
-            curve: Curves.easeOutQuad,
-          ),
-        ],
+      title: Text(
+        _getAppBarTitle(),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+          color: Colors.white,
+          letterSpacing: 0.5,
+        ),
+      ).animate().fadeIn(duration: 200.ms).slideX(
+        begin: 0.2,
+        end: 0,
+        duration: 300.ms,
+        curve: Curves.easeOutQuad,
       ),
       leading: IconButton(
         icon: const Icon(BoxIcons.bx_menu, color: Colors.white, size: 28),
@@ -173,7 +169,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>  NotificationScreen(),
+                builder: (context) => NotificationScreen(),
               ),
             );
           },
@@ -188,20 +184,6 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
   }
 
   String _getAppBarTitle() {
-    // switch (_selectedIndex) {
-    //   case 0:
-    //     return 'Schedule';
-    //   case 1:
-    //     return 'Dashboard';
-    //   case 2:
-    //     return 'Course Content';
-    //   case 3:
-    //     return 'Due Tasks';
-    //   case 4:
-    //     return 'Academic Report';
-    //   default:
-    //     return 'LMS';
-    // }
     return 'LMS';
   }
 
@@ -210,7 +192,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
       margin: const EdgeInsets.only(bottom: 8),
       child: Stack(
         children: [
-          // Background design elements
+          // Background design elements with updated colors
           Positioned(
             top: -100,
             right: -50,
@@ -219,7 +201,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF3949AB).withOpacity(0.05),
+                color: primaryColor.withOpacity(0.05),
               ),
             ),
           ),
@@ -231,7 +213,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
               height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF3949AB).withOpacity(0.07),
+                color: primaryColor.withOpacity(0.07),
               ),
             ),
           ),
@@ -256,7 +238,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
@@ -269,8 +251,8 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
       child: BottomBarFloating(
         items: _bottomBarItems,
         backgroundColor: Colors.transparent,
-        color: Colors.grey.shade600,
-        colorSelected: const Color(0xFF3949AB),
+        color: textSecondary,
+        colorSelected: primaryColor,
         indexSelected: _selectedIndex,
         paddingVertical: 12,
         onTap: (index) {
@@ -278,7 +260,6 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
             setState(() {
               _selectedIndex = index;
             });
-            // Add a small haptic feedback
             HapticFeedback.lightImpact();
             _animationController.reset();
             _animationController.forward();
@@ -291,14 +272,13 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
   Widget _buildFloatingActionButton() {
     return FloatingActionButton(
       onPressed: () {
-        // Quick action button - maybe for attendance check-in or something important
         showModalBottomSheet(
           context: context,
           backgroundColor: Colors.transparent,
           builder: (context) => _buildQuickActionsSheet(),
         );
       },
-      backgroundColor: const Color(0xFF3949AB),
+      backgroundColor: primaryColor,
       elevation: 8,
       child: const Icon(
         Icons.add,
@@ -318,7 +298,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
       height: 300,
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -332,18 +312,20 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
               width: 50,
               height: 5,
               decoration: BoxDecoration(
-                color: Colors.grey,
-                borderRadius: BorderRadius.all(Radius.circular(10),
+                color: textSecondary,
+                borderRadius: BorderRadius.all(
+                  Radius.circular(10),
+                ),
               ),
             ),
-          ),),
-          SizedBox(height: 20),
-          const Text(
+          ),
+          const SizedBox(height: 20),
+          Text(
             'Quick Actions',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF3949AB),
+              color: primaryColor,
             ),
           ),
           const SizedBox(height: 20),
@@ -351,12 +333,18 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
             child: GridView.count(
               crossAxisCount: 3,
               children: [
-                _buildQuickActionItem(BoxIcons.bx_check_square, 'Mark\nAttendance', Colors.green),
-                _buildQuickActionItem(BoxIcons.bx_file, 'Submit\nAssignment', Colors.orange),
-                _buildQuickActionItem(BoxIcons.bx_calendar, 'View\nSchedule', Colors.blue),
-                _buildQuickActionItem(BoxIcons.bx_book_open, 'Study\nMaterials', Colors.purple),
-                _buildQuickActionItem(BoxIcons.bx_help_circle, 'Ask\nHelp', Colors.red),
-                _buildQuickActionItem(BoxIcons.bx_line_chart, 'Check\nGrades', Colors.teal),
+                _buildQuickActionItem(
+                    BoxIcons.bx_check_square, 'Mark\nAttendance', Colors.green),
+                _buildQuickActionItem(
+                    BoxIcons.bx_file, 'Submit\nAssignment', Colors.orange),
+                _buildQuickActionItem(
+                    BoxIcons.bx_calendar, 'View\nSchedule', primaryColor),
+                _buildQuickActionItem(
+                    BoxIcons.bx_book_open, 'Study\nMaterials', Colors.purple),
+                _buildQuickActionItem(
+                    BoxIcons.bx_help_circle, 'Ask\nHelp', Colors.red),
+                _buildQuickActionItem(
+                    BoxIcons.bx_line_chart, 'Check\nGrades', Colors.teal),
               ],
             ),
           ),
@@ -393,7 +381,7 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Colors.grey.shade800,
+            color: textPrimary,
           ),
         ),
       ],
@@ -409,16 +397,21 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
   Widget _buildDrawer(BuildContext context) {
     final studentProvider = Provider.of<StudentProvider>(context);
     final student = studentProvider.student;
+    final isGrader = student?.isGrader != null
+        ? (student!.isGrader is bool
+        ? student.isGrader
+        : (student.isGrader?.toString().toLowerCase() == 'true'))
+        : false;
 
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: cardColor,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF3949AB), Color(0xFF303F9F)],
+                colors: [primaryColor, secondaryColor],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -445,7 +438,8 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
                         radius: 30,
                         backgroundImage: student?.image != null
                             ? NetworkImage(student!.image!)
-                            : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                            : const AssetImage('assets/default_avatar.png')
+                        as ImageProvider,
                       ),
                     ),
                     const SizedBox(width: 15),
@@ -466,7 +460,8 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
                           ),
                           const SizedBox(height: 5),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(10),
@@ -485,36 +480,72 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
                   ],
                 ),
                 const SizedBox(height: 15),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.verified_user,
-                        color: Colors.white,
-                        size: 12,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Active Student',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified_user,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Active Student',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isGrader) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.grading,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Grader',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
+
           _buildDrawerItem(BoxIcons.bx_user_circle, 'My Profile', () {
             Navigator.pop(context);
             Navigator.push(
@@ -522,11 +553,25 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
               MaterialPageRoute(builder: (context) => const ProfileScreen()),
             );
           }),
+          if (isGrader)
+            _buildDrawerItem(BoxIcons.bxs_graduation, 'Grader Dashboard',
+                    () async {
+                  bool? isOkay = await CustomAlert.confirm(
+                      context, 'Switch to Grader Mode');
+                  if (isOkay == true) {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                GraderDashboard(studentId: student.id)));
+                  }
+                }),
           _buildDrawerItem(BoxIcons.bx_calendar_check, 'Attendance', () {
             Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => AttendanceOverviewScreen()),
+              MaterialPageRoute(
+                  builder: (context) => AttendanceOverviewScreen()),
             );
           }),
           _buildDrawerItem(BoxIcons.bx_file, 'Documents', () {
@@ -534,12 +579,21 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
           }),
           _buildDrawerItem(BoxIcons.bx_book_bookmark, 'Courses', () {
             Navigator.pop(context);
-            setState(() {
-              _selectedIndex = 2;
-            });
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      StudentCoursesScreen(studentId: student!.id)),
+            );
           }),
-          _buildDrawerItem(BoxIcons.bx_money, 'Fees & Payments', () {
+          _buildDrawerItem(BoxIcons.bxs_report, 'Transcript', () {
             Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      StudentTranscriptScreen(studentId: student!.id)),
+            );
           }),
           const Divider(height: 35),
           _buildDrawerItem(BoxIcons.bx_cog, 'Settings', () {
@@ -549,56 +603,65 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
             Navigator.pop(context);
           }),
           const SizedBox(height: 20),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                BoxIcons.bx_log_out,
-                color: Colors.red,
-              ),
-            ),
-            title: const Text(
-              'Logout',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('Logout'),
-                    content: const Text('Are you sure you want to logout?'),
-                    actions: [
-                      TextButton(
-                        child: const Text('Cancel'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Logout'),
-                        onPressed: () {
-                          studentProvider.logout();
-                          Navigator.of(context).pop();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                    ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () async {
+                final shouldLogout = await CustomAlert.confirm(
+                  context,
+                  'Are you sure you want to logout?',
+                );
+                if (shouldLogout == true) {
+                  studentProvider.logout();
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => Login()),
+                        (Route<dynamic> route) => false,
                   );
-                },
-              );
-            },
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.red.withOpacity(0.05),
+                  border: Border.all(
+                    color: Colors.red.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red.withOpacity(0.1),
+                      ),
+                      child: Icon(
+                        Bootstrap.box_arrow_right,
+                        size: 20,
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Logout',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      Icons.chevron_right,
+                      color: Colors.red.withOpacity(0.5),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -610,12 +673,12 @@ class _StudentHomeState extends State<StudentHome> with SingleTickerProviderStat
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFF3949AB).withOpacity(0.1),
+          color: primaryColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(
           icon,
-          color: const Color(0xFF3949AB),
+          color: primaryColor,
         ),
       ),
       title: Text(

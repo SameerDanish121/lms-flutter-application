@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:lmsv2/Student/Timetable.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../provider/student_provider.dart';
@@ -16,7 +17,16 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   Timer? _timer;
-
+  static const Color primaryColor = Color(0xFF4361EE);
+  static const Color activeColor = Color(0xFF4CC9F0);
+  static const Color previousColor = Color(0xFF6C757D);
+  static const Color lightBackground = Color(0xFFF8F9FA);
+  static const Color textPrimary = Color(0xFF212529);
+  static const Color textSecondary = Color(0xFF6C757D);
+  static const Color successColor = Color(0xFF28A745);
+  static const Color warningColor = Color(0xFFFFC107);
+  static const Color dangerColor = Color(0xFFDC3545);
+  static const Color cardBackground = Colors.white;
   @override
   void initState() {
     super.initState();
@@ -44,12 +54,14 @@ class _HomeTabState extends State<HomeTab> {
         // Get today's timetable
         final now = DateTime.now();
         final day = _getDayName(now.weekday);
-        final todayClasses = student.timetable.where((cls) =>
-        cls['day'].toString().toLowerCase() == day.toLowerCase()).toList();
+        final todayClasses = student.timetable
+            .where((cls) =>
+                cls['day'].toString().toLowerCase() == day.toLowerCase())
+            .toList();
 
         return SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -68,81 +80,174 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildStudentInfoCard(StudentInfo student) {
     return Container(
-      constraints: BoxConstraints(minHeight: 180), // Added minimum height constraint
+      constraints: BoxConstraints(minHeight: 130), // Optimal height
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3949AB), Color(0xFF5C6BC0)],
+        gradient: LinearGradient(
+          colors: [primaryColor, activeColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: primaryColor.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+            spreadRadius: 1,
           ),
         ],
+      ),
+      child: Stack(
+        children: [
+          // Decorative elements
+          Positioned(
+            right: 10,
+            top: 10,
+            child: Icon(BoxIcons.bx_user_circle, size: 60, color: Colors.white.withOpacity(0.1)),
+          ),
+
+          // Content Row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Profile image with semi-circle cutout
+                Container(
+                  width: 80,
+                  height: 100,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: Stack(
+                    children: [
+                      // Semi-circle background
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              bottomLeft: Radius.circular(20),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Profile image
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 60,
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: Offset(2, 3),
+                                )
+                              ],
+                            ),
+                            child: student.image != null
+                                ? Image.network(
+                              student.image!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: Colors.grey.shade300,
+                                child: Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                                : Container(
+                              color: Colors.grey.shade300,
+                              child: Icon(
+                                Icons.person,
+                                size: 40,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Student info
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        student.name,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 2,
+                              offset: Offset(1, 1),
+                            )
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildInfoChip(BoxIcons.bx_id_card, student.regNo),
+                      const SizedBox(height: 4),
+                      _buildInfoChip(BoxIcons.bx_book, student.program),
+                      const SizedBox(height: 4),
+                      _buildInfoChip(BoxIcons.bx_group, '${student.section} • ${student.currentSession}'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 100.ms).slideY(
+      begin: 0.1,
+      end: 0,
+      duration: 250.ms,
+      curve: Curves.easeOutQuad,
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String text) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Image container with fixed width and height
-          Container(
-            width: 120,
-            height: 180, // Fixed height
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
+          Icon(icon, size: 14, color: Colors.white.withOpacity(0.9)),
+          SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
               ),
-              child: student.image != null
-                  ? Image.network(
-                student.image!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: Colors.grey.shade300,
-                  child: const Icon(
-                    Icons.person,
-                    size: 80,
-                    color: Colors.white,
-                  ),
-                ),
-              )
-                  : Container(
-                color: Colors.grey.shade300,
-                child: const Icon(
-                  Icons.person,
-                  size: 80,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    student.name,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _infoRow(BoxIcons.bx_id_card, 'Reg No', student.regNo),
-                  const SizedBox(height: 4),
-                  _infoRow(BoxIcons.bx_book, 'Program', student.program),
-                  const SizedBox(height: 4),
-                  _infoRow(BoxIcons.bx_group, 'Section', student.section),
-                  const SizedBox(height: 4),
-                  _infoRow(BoxIcons.bx_calendar, 'Semester', student.currentSession),
-                ],
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -150,34 +255,8 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.white70),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.white70,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTodayTimetableSection(List todayClasses, String day, DateTime now) {
+  Widget _buildTodayTimetableSection(
+      List todayClasses, String day, DateTime now) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -208,13 +287,14 @@ class _HomeTabState extends State<HomeTab> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => StudentHome()),
+                  MaterialPageRoute(
+                      builder: (context) => StudentTimetableScreen()),
                 );
               },
               child: const Text(
                 'View All',
                 style: TextStyle(
-                  color: Color(0xFF3949AB),
+                  color:primaryColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -252,105 +332,133 @@ class _HomeTabState extends State<HomeTab> {
           borderRadius: BorderRadius.circular(12),
         ),
         columnWidths: const {
-          0: FixedColumnWidth(90),  // Time (slightly wider)
-          1: FixedColumnWidth(60),  // Code (wider with padding)
-          2: FixedColumnWidth(80),  // Venue (dedicated width)
-          3: FlexColumnWidth(),      // Instructor (takes remaining space)
+          0: FixedColumnWidth(90), // Time (slightly wider)
+          1: FixedColumnWidth(60), // Code (wider with padding)
+          2: FixedColumnWidth(80), // Venue (dedicated width)
+          3: FlexColumnWidth(), // Instructor (takes remaining space)
         },
         children: [
-      // Header row with improved spacing
-      TableRow(
-      decoration: BoxDecoration(
-      color: Colors.grey.shade100,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      children: const [
-      Padding(
-        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        child: Center(child: Text('TIME', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),),
-        Padding(
-            padding: EdgeInsets.only(left: 12, right: 8, top: 10, bottom: 10),
-            child: Center(child: Text('CODE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),),
-            Padding(
+          // Header row with improved spacing
+          TableRow(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            children: const [
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                child: Center(child: Text('VENUE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),),
-                Padding(
+                child: Center(
+                    child: Text('TIME',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12))),
+              ),
+              Padding(
+                padding:
+                    EdgeInsets.only(left: 12, right: 8, top: 10, bottom: 10),
+                child: Center(
+                    child: Text('CODE',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12))),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                child: Center(
+                    child: Text('VENUE',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12))),
+              ),
+              Padding(
                   padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                  child: Center(child: Text('INSTRUCTOR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)))),
-                  ],
+                  child: Center(
+                      child: Text('INSTRUCTOR',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12)))),
+            ],
+          ),
+          // Data rows
+          ...todayClasses.map((classInfo) {
+            final isCurrentClass = isCurrentTimeSlot(
+              classInfo['start_time'].toString(),
+              classInfo['end_time'].toString(),
+            );
+
+            String instructor = '';
+            if (classInfo['teachername'] != "N/A" &&
+                    (classInfo['juniorlecturer'] != "N/A") ||
+                classInfo['juniorlecturer'] != null) {
+              instructor =
+                  '${classInfo['teachername']}\n${classInfo['juniorlecturer']}';
+            } else if (classInfo['teachername'] != "N/A") {
+              instructor = classInfo['teachername'].toString();
+            } else if (classInfo['juniorlecturer'] != "N/A") {
+              instructor = classInfo['juniorlecturer'].toString();
+            }
+
+            return TableRow(
+              decoration: BoxDecoration(
+                color: isCurrentClass ? const Color(0xFFE8F5E9) : Colors.white,
+              ),
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  child: Center(
+                    child: Text(
+                      '${classInfo['start_time'].toString().substring(0, 5)}\n${classInfo['end_time'].toString().substring(0, 5)}',
+                      style: TextStyle(
+                        color: isCurrentClass
+                            ? const Color(0xFF4CAF50)
+                            : Colors.grey.shade700,
+                        fontWeight: isCurrentClass
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-                // Data rows
-                ...todayClasses.map((classInfo) {
-        final isCurrentClass = isCurrentTimeSlot(
-        classInfo['start_time'].toString(),
-        classInfo['end_time'].toString(),
-        );
-
-        String instructor = '';
-        if (classInfo['teachername'] != "N/A" && (classInfo['juniorlecturer'] != "N/A")||classInfo['juniorlecturer'] != null) {
-        instructor = '${classInfo['teachername']}\n${classInfo['juniorlecturer']}';
-        } else if (classInfo['teachername'] != "N/A") {
-        instructor = classInfo['teachername'].toString();
-        } else if (classInfo['juniorlecturer'] != "N/A") {
-        instructor = classInfo['juniorlecturer'].toString();
-        }
-
-        return TableRow(
-        decoration: BoxDecoration(
-        color: isCurrentClass ? const Color(0xFFE8F5E9) : Colors.white,
-        ),
-        children: [
-        Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Center(
-        child: Text(
-        '${classInfo['start_time'].toString().substring(0, 5)}\n${classInfo['end_time'].toString().substring(0, 5)}',
-        style: TextStyle(
-        color: isCurrentClass ? const Color(0xFF4CAF50) : Colors.grey.shade700,
-        fontWeight: isCurrentClass ? FontWeight.bold : FontWeight.normal,
-        fontSize: 12,
-        ),
-        textAlign: TextAlign.center,
-        ),
-        ),
-        ),
-        Padding(
-        padding: const EdgeInsets.only(left: 12, right: 8, top: 12, bottom: 12),
-        child: Center(
-        child: Text(
-        classInfo['description'].toString(),
-        style: TextStyle(
-        fontWeight: FontWeight.w500,
-        fontSize: 12,
-        color: Colors.grey.shade800,
-        ),
-        textAlign: TextAlign.center,
-        ),
-        ),
-        ),
-        Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Center(
-        child: Text(
-        classInfo['venue'].toString(),
-        style: const TextStyle(fontSize: 12),
-        textAlign: TextAlign.center,
-        ),
-        ),
-        ),
-        Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Center(
-        child: Text(
-        instructor,
-        style: const TextStyle(fontSize: 12),
-        textAlign: TextAlign.center,
-        ),
-        ),
-        ),
-        ],
-        );
-        }).toList(),
+                Padding(
+                  padding: const EdgeInsets.only(
+                      left: 12, right: 8, top: 12, bottom: 12),
+                  child: Center(
+                    child: Text(
+                      classInfo['description'].toString(),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                        color: Colors.grey.shade800,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  child: Center(
+                    child: Text(
+                      classInfo['venue'].toString(),
+                      style: const TextStyle(fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  child: Center(
+                    child: Text(
+                      instructor,
+                      style: const TextStyle(fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
         ],
       ),
     );
@@ -373,7 +481,8 @@ class _HomeTabState extends State<HomeTab> {
       child: Center(
         child: Column(
           children: [
-            Icon(BoxIcons.bx_calendar_check, size: 48, color: Colors.grey.shade400),
+            Icon(BoxIcons.bx_calendar_check,
+                size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 8),
             Text(
               'No classes scheduled for today',
@@ -466,7 +575,8 @@ class _HomeTabState extends State<HomeTab> {
   Widget _buildQuickAccessCard(Map<String, dynamic> item) {
     return InkWell(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder:(context)=>YourTasksScreen()));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => YourTasksScreen()));
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
@@ -513,14 +623,32 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   String _getDayName(int weekday) {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
     return days[weekday - 1];
   }
 
   String _getMonthName(int month) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return months[month - 1];
   }
@@ -532,7 +660,9 @@ class _HomeTabState extends State<HomeTab> {
 
       int parseTime(String t) {
         final parts = t.split(':').map(int.parse).toList();
-        return parts[0] * 3600 + parts[1] * 60 + (parts.length > 2 ? parts[2] : 0);
+        return parts[0] * 3600 +
+            parts[1] * 60 +
+            (parts.length > 2 ? parts[2] : 0);
       }
 
       final start = parseTime(startTime);
