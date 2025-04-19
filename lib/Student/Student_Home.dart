@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:flutter/services.dart';
@@ -6,11 +7,14 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:lmsv2/Student/Grader/grader_dash.dart';
 import 'package:lmsv2/Student/Profile.dart';
 import 'package:lmsv2/Student/student_notification.dart';
-import 'package:lmsv2/Student/transcipt.dart';
+import 'package:lmsv2/Student/Transcript/transcipt.dart';
 import 'package:lmsv2/alerts/custom_alerts.dart';
 import 'package:lmsv2/auth/login_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:quickalert/models/quickalert_type.dart';
+import 'package:quickalert/widgets/quickalert_dialog.dart';
+import '../dev/developer_options.dart';
 import '../provider/student_provider.dart';
 import 'Attendance/Overall_Attendance.dart';
 import 'Course/Course.dart';
@@ -99,7 +103,6 @@ class _StudentHomeState extends State<StudentHome>
       drawer: _buildDrawer(context),
       body: _buildBody(),
       bottomNavigationBar: _buildBottomNavigation(),
-      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
@@ -598,9 +601,11 @@ class _StudentHomeState extends State<StudentHome>
           const Divider(height: 35),
           _buildDrawerItem(BoxIcons.bx_cog, 'Settings', () {
             Navigator.pop(context);
+            AppSettings.openAppSettings();
           }),
           _buildDrawerItem(BoxIcons.bx_help_circle, 'Help & Support', () {
             Navigator.pop(context);
+            _showPasswordDialog(context);
           }),
           const SizedBox(height: 20),
           Padding(
@@ -689,6 +694,50 @@ class _StudentHomeState extends State<StudentHome>
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
+    );
+  }
+  void _showPasswordDialog(BuildContext context) {
+    String password = '';
+    QuickAlert.show(
+      context: context,
+      type: QuickAlertType.custom,
+      barrierDismissible: false,
+      title: 'Developer Access',
+      customAsset: 'assets/developer.jpg', // For the developer photo
+      widget: TextField(
+        obscureText: true,
+        onChanged: (value) => password = value,
+        decoration: InputDecoration(
+          hintText: 'Enter Password',
+          hintStyle: TextStyle(color: Colors.grey[600]),
+          filled: true,
+          fillColor: Colors.grey[200],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        ),
+      ),
+      confirmBtnText: 'Submit',
+      cancelBtnText: 'Cancel',
+      confirmBtnColor: Color(0xFF3969D7),
+      onConfirmBtnTap: () {
+        if (password == '123') {
+          Navigator.pop(context); // Close the QuickAlert
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => SecretScreen()),
+          );
+        } else {
+          Navigator.pop(context); // Close the first alert
+          QuickAlert.show(
+            context: context,
+            type: QuickAlertType.error,
+            text: 'Incorrect Password!',
+          );
+        }
+      },
     );
   }
 }

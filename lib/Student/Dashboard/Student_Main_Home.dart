@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:lmsv2/Student/Course/lesson_plan.dart';
 import 'package:lmsv2/Student/Timetable.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../provider/student_provider.dart';
 import '../Student_Home.dart';
 import '../Task/task_info.dart';
+import '../Transcript/exam.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({Key? key}) : super(key: key);
@@ -54,10 +56,7 @@ class _HomeTabState extends State<HomeTab> {
         // Get today's timetable
         final now = DateTime.now();
         final day = _getDayName(now.weekday);
-        final todayClasses = student.timetable
-            .where((cls) =>
-                cls['day'].toString().toLowerCase() == day.toLowerCase())
-            .toList();
+        final todayClasses = student.timetable;
 
         return SingleChildScrollView(
           child: Padding(
@@ -69,7 +68,8 @@ class _HomeTabState extends State<HomeTab> {
                 const SizedBox(height: 24),
                 _buildTodayTimetableSection(todayClasses, day, now),
                 const SizedBox(height: 24),
-                _buildQuickAccessSection(),
+                // _buildQuickAccessSection(),
+                _buildQuickAccessSections(),
               ],
             ),
           ),
@@ -225,7 +225,6 @@ class _HomeTabState extends State<HomeTab> {
       curve: Curves.easeOutQuad,
     );
   }
-
   Widget _buildInfoChip(IconData icon, String text) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -254,7 +253,6 @@ class _HomeTabState extends State<HomeTab> {
       ),
     );
   }
-
   Widget _buildTodayTimetableSection(
       List todayClasses, String day, DateTime now) {
     return Column(
@@ -267,21 +265,38 @@ class _HomeTabState extends State<HomeTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Today\'s Classes',
+                  "Today's Classes",
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
+                    fontWeight: FontWeight.w600,  // Semi-bold instead of bold for modern look
+                    color: textPrimary,  // Using your theme's primary text color
+                    letterSpacing: -0.3,  // Slightly tighter letter spacing
                   ),
                 ),
-                Text(
-                  '$day, ${now.day} ${_getMonthName(now.month)} ${now.year}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
+                const SizedBox(height: 2),  // Reduced spacing for tighter grouping
+                Row(
+                  children: [
+                    Icon(
+                      Bootstrap.calendar3,  // Calendar icon for visual enhancement
+                      size: 14,
+                      color: textSecondary.withOpacity(0.7),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$day, ${now.day} ${_getMonthName(now.month)} ${now.year}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: textSecondary.withOpacity(0.8),  // Using your theme color
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ],
+            ).animate().fadeIn(delay: 50.ms).slideY(
+              begin: -4,
+              end: 0,
+              duration: 200.ms,
             ),
             TextButton(
               onPressed: () {
@@ -291,14 +306,24 @@ class _HomeTabState extends State<HomeTab> {
                       builder: (context) => StudentTimetableScreen()),
                 );
               },
-              child: const Text(
-                'View All',
-                style: TextStyle(
-                  color:primaryColor,
-                  fontWeight: FontWeight.bold,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: primaryColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  'View All',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ),
+
           ],
         ),
         const SizedBox(height: 12),
@@ -308,7 +333,6 @@ class _HomeTabState extends State<HomeTab> {
       ],
     );
   }
-
   Widget _buildCompactTimetable(List todayClasses) {
     return Container(
       width: double.infinity,
@@ -466,161 +490,56 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildNoClassesCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            color: primaryColor.withOpacity(0.05),
+            blurRadius: 10,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(
+          color: Colors.grey.shade100,
+          width: 1,
+        ),
       ),
       child: Center(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(BoxIcons.bx_calendar_check,
-                size: 48, color: Colors.grey.shade400),
-            const SizedBox(height: 8),
+            Icon(
+              BoxIcons.bx_calendar_heart, // More thematic icon
+              size: 48,
+              color: primaryColor.withOpacity(0.3),
+            ),
+            const SizedBox(height: 12),
             Text(
-              'No classes scheduled for today',
+              'No classes scheduled',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickAccessSection() {
-    final List<Map<String, dynamic>> quickAccess = [
-      {
-        'title': 'Assignment',
-        'icon': BoxIcons.bx_task,
-        'color': const Color(0xFFF44336),
-      },
-      {
-        'title': 'Courses',
-        'icon': BoxIcons.bx_book_alt,
-        'color': const Color(0xFF2196F3),
-      },
-      {
-        'title': 'Results',
-        'icon': BoxIcons.bx_bar_chart_alt_2,
-        'color': const Color(0xFF4CAF50),
-      },
-      {
-        'title': 'Attendance',
-        'icon': BoxIcons.bx_check_circle,
-        'color': const Color(0xFFFFC107),
-      },
-      {
-        'title': 'Library',
-        'icon': BoxIcons.bx_library,
-        'color': const Color(0xFF9C27B0),
-      },
-      {
-        'title': 'Campus',
-        'icon': BoxIcons.bx_map_alt,
-        'color': const Color(0xFF795548),
-      },
-      {
-        'title': 'Events',
-        'icon': BoxIcons.bx_calendar_event,
-        'color': const Color(0xFF607D8B),
-      },
-      {
-        'title': 'Resources',
-        'icon': BoxIcons.bx_folder,
-        'color': const Color(0xFF009688),
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Access',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-          ),
-        ),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1,
-          ),
-          itemCount: quickAccess.length,
-          itemBuilder: (context, index) {
-            final item = quickAccess[index];
-            return _buildQuickAccessCard(item);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickAccessCard(Map<String, dynamic> item) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => YourTasksScreen()));
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: item['color'].withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                item['icon'],
-                color: item['color'],
-                size: 24,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              item['title'],
-              style: TextStyle(
-                fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey.shade800,
+                color: textSecondary.withOpacity(0.8),
               ),
-              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Enjoy your free time!',
+              style: TextStyle(
+                fontSize: 13,
+                color: textSecondary.withOpacity(0.6),
+              ),
             ),
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(delay: 100.ms);
   }
+
+
 
   String _getDayName(int weekday) {
     const days = [
@@ -674,5 +593,299 @@ class _HomeTabState extends State<HomeTab> {
     } catch (e) {
       return false;
     }
+  }
+
+
+
+
+/////////////////////////////////fault////////////////////////////////////
+
+  Widget _buildQuickAccessSections() {
+    final List<Map<String, dynamic>> quickAccess = [
+      {
+        'title':'Due Task',
+        'icon':BoxIcons.bx_task,
+        'color':const Color(0xFF4CAF50)
+      },
+      {
+        'title': 'Transcript',
+        'icon': BoxIcons.bx_file,
+        'color': primaryColor,
+      },
+      {
+        'title': 'Courses',
+        'icon': BoxIcons.bx_book_alt,
+        'color': const Color(0xFF2196F3),
+      },
+      {
+        'title': 'Exams',
+        'icon': BoxIcons.bx_edit_alt,
+        'color': const Color(0xFFF44336),
+      },
+      {
+        'title': 'Academic Report',
+        'icon': BoxIcons.bx_bar_chart_alt_2,
+        'color': const Color(0xFF4CAF50),
+      },
+      {
+        'title': 'Timetable',
+        'icon': BoxIcons.bx_calendar,
+        'color': const Color(0xFFFFC107),
+      },
+      {
+        'title': 'Course Content',
+        'icon': BoxIcons.bx_folder_open,
+        'color': const Color(0xFF9C27B0),
+      },
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Quick Access',
+                    style: TextStyle(
+                      fontSize: 17,  // Slightly smaller for better hierarchy
+                      fontWeight: FontWeight.w600,  // Semi-bold instead of bold
+                      color: textPrimary,  // Using your theme's primary text color
+                      letterSpacing: -0.3,  // Tighter letter spacing
+                    ),
+                  ),
+                  const SizedBox(width: 8),  // Spacing between text and icon
+                  Icon(
+                    Bootstrap.thunderbolt,  // Lightning bolt icon for "quick" concept
+                    size: 16,
+                    color: activeColor,  // Using your activeColor for accent
+                  ),
+                ],
+              ).animate().fadeIn(delay: 50.ms).slideY(
+                begin: -4,
+                end: 0,
+                duration: 200.ms,
+              ),
+              TextButton(
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => _buildQuickActionsSheet(),
+                  );
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: primaryColor.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    'View All',
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1,
+          ),
+          itemCount: quickAccess.length,
+          itemBuilder: (context, index) {
+            final item = quickAccess[index];
+            return _buildQuickAccessCards(item);
+          },
+        ),
+      ],
+    );
+  }
+  static const Color cardColor = Colors.white;
+  Widget _buildQuickAccessCards(Map<String, dynamic> item) {
+    return SizedBox(
+      width: 110, // Fixed width
+      height: 100, // Increased height to prevent overflow
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+            if(item['title']=='Due Task'){
+              Navigator.push(context,MaterialPageRoute(builder: (context)=>YourTasksScreen()));
+            }else if(item['title']=='Exams'){
+
+              Navigator.push(context,MaterialPageRoute(builder: (context)=>ExamResultsScreen(studentId: studentProvider.student!.id,)));
+            }else if(item['title']=='Course Content'){
+              Navigator.push(context,MaterialPageRoute(builder: (context)=>CourseContentScreen(studentId: studentProvider.student!.id,)));
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(8), // Reduced padding
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // Added to prevent overflow
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10), // Reduced padding
+                  decoration: BoxDecoration(
+                    color: item['color'].withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: item['color'].withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    item['icon'],
+                    color: item['color'],
+                    size: 20, // Reduced icon size
+                  ),
+                ),
+                const SizedBox(height: 6), // Reduced spacing
+                Text(
+                  item['title'],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11, // Reduced font size
+                    fontWeight: FontWeight.w500,
+                    color: textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _buildQuickActionsSheet() {
+    return Container(
+      height: 300,
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: textSecondary,
+                borderRadius: BorderRadius.all(
+                  Radius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Quick Actions',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 3,
+              children: [
+                _buildQuickActionItem(
+                    BoxIcons.bx_check_square, 'Mark\nAttendance', Colors.green),
+                _buildQuickActionItem(
+                    BoxIcons.bx_file, 'Submit\nAssignment', Colors.orange),
+                _buildQuickActionItem(
+                    BoxIcons.bx_calendar, 'View\nSchedule', primaryColor),
+                _buildQuickActionItem(
+                    BoxIcons.bx_book_open, 'Study\nMaterials', Colors.purple),
+                _buildQuickActionItem(
+                    BoxIcons.bx_help_circle, 'Ask\nHelp', Colors.red),
+                _buildQuickActionItem(
+                    BoxIcons.bx_line_chart, 'Check\nGrades', Colors.teal),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().slideY(
+      begin: 1.0,
+      end: 0.0,
+      duration: 300.ms,
+      curve: Curves.easeOutQuad,
+    );
+  }
+
+  Widget _buildQuickActionItem(IconData icon, String label, Color color) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: color.withOpacity(0.3), width: 1),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 30,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: textPrimary,
+          ),
+        ),
+      ],
+    ).animate().fadeIn(delay: 100.ms).slideY(
+      begin: 0.2,
+      end: 0,
+      delay: 100.ms,
+      duration: 300.ms,
+      curve: Curves.easeOutQuad,
+    );
   }
 }

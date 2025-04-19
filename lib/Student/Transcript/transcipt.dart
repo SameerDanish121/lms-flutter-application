@@ -5,8 +5,8 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:lmsv2/api/ApiConfig.dart';
-import '../provider/student_provider.dart';
-import 'Transcript/manage.dart';
+import '../../provider/student_provider.dart';
+import 'manage.dart';
 
 class StudentTranscriptScreen extends StatefulWidget {
   final int studentId;
